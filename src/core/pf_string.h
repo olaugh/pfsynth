@@ -21,6 +21,8 @@ typedef struct {
     /* String / loop */
     double inharmonicity;        /* B in f_n ~ n*f0*sqrt(1+B*n^2). ~1e-4..1e-2 */
     double decay_t60;            /* seconds for the fundamental to drop 60 dB */
+    double release_t60;          /* seconds for the fundamental to drop 60 dB once
+                                  * the damper falls (note-off). ~0.1..0.3 */
     double damping;              /* extra high-frequency loss, [0,1). Brightness. */
     int    dispersion_sections;  /* M first-order allpasses (0..PF_MAX_DISPERSION) */
 
@@ -47,8 +49,10 @@ typedef struct pf_string {
     /* First-order allpass fractional-delay tuner: y = c*(x - y1) + x1 */
     double tune_c, tune_x1, tune_y1;
 
-    /* One-pole loss filter: y = b0*x + a1*y1  (DC gain = loop gain g) */
-    double loss_b0, loss_a1, loss_y1;
+    /* One-pole loss filter: y = b0*x + a1*y1  (DC gain = loop gain g).
+     * loss_b0 is the ringing gain; loss_b0_rel is the damped (note-off) gain. */
+    double loss_b0, loss_b0_rel, loss_a1, loss_y1;
+    int    released;             /* damper has fallen (note-off) */
 
     /* Dispersion: M cascaded first-order allpasses, shared coefficient. */
     int    disp_n;
@@ -80,8 +84,13 @@ void pf_string_defaults(pf_string_params *p, double sample_rate);
 void pf_string_init(pf_string *s, const pf_string_params *p, double f0);
 
 /* Launch the hammer. velocity in (0,1]. Does NOT reset string state, so a
- * re-strike interacts with the still-ringing string. */
+ * re-strike interacts with the still-ringing string. Clears the damper. */
 void pf_string_strike(pf_string *s, double velocity);
+
+/* Drop the damper onto the string (note-off): the loop switches to the much
+ * faster release decay. A held sustain pedal means the host simply doesn't
+ * call this. */
+void pf_string_release(pf_string *s);
 
 /* Render n samples, ADDING them into out[] (mix). */
 void pf_string_process(pf_string *s, float *out, int n);

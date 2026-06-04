@@ -43,6 +43,7 @@ void pf_string_defaults(pf_string_params *p, double sample_rate)
     p->sample_rate         = sample_rate;
     p->inharmonicity       = 4.0e-4;   /* moderate piano stiffness */
     p->decay_t60           = 7.0;
+    p->release_t60         = 0.15;     /* damper kills the note quickly */
     p->damping             = 0.20;
     p->dispersion_sections = 8;
 
@@ -72,9 +73,11 @@ void pf_string_init(pf_string *s, const pf_string_params *p, double f0)
 
     /* --- loss filter: pick loop gain g for the target fundamental T60 --- */
     {
-        double g = pow(10.0, -3.0 / (f0 * p->decay_t60)); /* g^(f0*T60) = 1e-3 */
-        s->loss_b0 = g * (1.0 - d);
-        s->loss_a1 = d;
+        double g   = pow(10.0, -3.0 / (f0 * p->decay_t60)); /* g^(f0*T60) = 1e-3 */
+        double grl = pow(10.0, -3.0 / (f0 * p->release_t60));
+        s->loss_b0     = g   * (1.0 - d);
+        s->loss_b0_rel = grl * (1.0 - d);
+        s->loss_a1     = d;
     }
     double Dloss0 = pd_onepole(w0, d);
 
@@ -148,7 +151,13 @@ void pf_string_strike(pf_string *s, double velocity)
     s->ham_contacted = 0;
     s->last_F    = 0.0;
     s->active    = 1;
+    s->released  = 0;
     s->dbg_contact_samples = 0;
+}
+
+void pf_string_release(pf_string *s)
+{
+    s->released = 1;
 }
 
 void pf_string_process(pf_string *s, float *out, int n)
@@ -166,8 +175,10 @@ void pf_string_process(pf_string *s, float *out, int n)
         double ty = s->tune_c * (r - s->tune_y1) + s->tune_x1;
         s->tune_x1 = r; s->tune_y1 = ty; r = ty;
 
-        /* loss / loop gain (frequency-dependent decay) */
-        double ly = s->loss_b0 * r + s->loss_a1 * s->loss_y1;
+        /* loss / loop gain (frequency-dependent decay); the damped gain is
+         * used once the note has been released */
+        double b0 = s->released ? s->loss_b0_rel : s->loss_b0;
+        double ly = b0 * r + s->loss_a1 * s->loss_y1;
         s->loss_y1 = ly; r = ly;
 
         /* dispersion allpass cascade */
