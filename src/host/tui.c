@@ -391,7 +391,8 @@ int main(int argc, char **argv)
 
     struct notcurses_options opts;
     memset(&opts, 0, sizeof opts);
-    opts.flags = NCOPTION_SUPPRESS_BANNERS | NCOPTION_NO_ALTERNATE_SCREEN;
+    /* full-screen alternate-screen TUI; terminal is restored cleanly on exit */
+    opts.flags = NCOPTION_SUPPRESS_BANNERS;
     struct notcurses *nc = notcurses_init(&opts, NULL);
     if (!nc) { pf_audio_stop(); fprintf(stderr, "notcurses init failed\n"); return 1; }
     struct ncplane *std = notcurses_stdplane(nc);
