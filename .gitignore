@@ -1,3 +1,5 @@
 build/
 out.wav
 *.o
+maestro/
+*.dSYM/

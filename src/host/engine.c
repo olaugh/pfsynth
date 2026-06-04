@@ -43,6 +43,13 @@ void pf_engine_set_params(pf_engine *e, const pf_string_params *p)
     pthread_mutex_unlock(&e->lock);
 }
 
+void pf_engine_set_master(pf_engine *e, double gain)
+{
+    pthread_mutex_lock(&e->lock);
+    e->master_gain = gain;
+    pthread_mutex_unlock(&e->lock);
+}
+
 /* --- voice allocation (caller holds the lock) --- */
 
 static int alloc_slot(pf_engine *e, int note)

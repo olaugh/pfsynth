@@ -55,6 +55,7 @@ void pf_engine_destroy(pf_engine *e);
 
 /* Replace patch parameters and rebuild the note templates. */
 void pf_engine_set_params(pf_engine *e, const pf_string_params *p);
+void pf_engine_set_master(pf_engine *e, double gain);
 
 /* Live triggers (UI keyboard). velocity 1..127 like MIDI. */
 void pf_engine_note_on(pf_engine *e, int note, int vel);

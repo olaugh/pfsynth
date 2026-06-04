@@ -49,9 +49,46 @@ dispersive, lossy waveguide loop excited by a nonlinear felt hammer:
   on string velocity depends on force); it's resolved per sample with an **implicit Newton
   step**. The hammer injects the excitation — this is the attack and the soul of the sound.
 
+The voice also has a **damper**: `pf_string_release()` switches the loop to a fast
+`release_t60` decay, modeling the felt damper falling on note-off. A held sustain pedal
+just means the host doesn't call it.
+
 ### Deferred to later milestones
 Multi-string coupling (beating / double decay), commuted soundboard, the rest of the
 instrument family, the serialized song format.
+
+## Host tooling
+
+Beyond the offline WAV renderer there's an interactive **notcurses TUI** for auditioning
+patches and playing back MIDI. It is strictly dev-machine tooling — none of it ships.
+
+- `src/host/midi.{h,c}` — Standard MIDI File loader (format 0/1). Merges tracks, applies
+  the tempo map, and flattens to a timed event stream (note on/off + CC64 sustain). Used
+  to play the maestro dataset.
+- `src/host/engine.{h,c}` — polyphonic piano engine. Voice pool with stealing, a per-MIDI-
+  note bank of pre-initialized voice templates (so note-on is a memcpy + strike, never an
+  init on the audio thread), sustain-pedal handling, and a **sample-accurate sequencer**.
+  One mutex guards the whole engine across the UI/audio thread split (fine for a dev tool).
+  Output is the core's tiny displacement scaled by a makeup gain + a `tanh` safety clip.
+- `src/host/audio.{h,c}` — CoreAudio default-output AudioUnit (no external deps; system
+  frameworks only). Pulls `pf_engine_render` from the RT thread, 44.1k float stereo.
+- `src/host/tui.c` — the notcurses UI: live patch editor, maestro file browser, transport,
+  and a QWERTY "piano" (z-row / q-row) for playing by hand. Real key-up events are used
+  when the terminal supports them (kitty keyboard protocol); otherwise notes auto-release
+  after ~800 ms so it works everywhere.
+
+```
+make tui                         # build build/pfsynth-tui
+./build/pfsynth-tui [lib-dir]    # default lib: maestro/midi/maestro-v3.0.0
+```
+
+TUI keys: TAB switch pane · up/dn select · left/right adjust param · ENTER load file ·
+SPACE play/pause · `[` `]` seek · `p` sustain pedal · `+`/`-` octave · letter keys play ·
+`Q` quit.
+
+The TUI depends on **notcurses** (homebrew keg at `/opt/homebrew/opt/notcurses`, no
+pkg-config installed so the path is hardcoded in the Makefile) and macOS CoreAudio. The
+offline `pfsynth` target stays dependency-free.
 
 ## Core API (`src/core/pf_string.h`)
 
