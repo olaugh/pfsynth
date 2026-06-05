@@ -30,7 +30,7 @@
 
 enum {
     P_INHARM, P_DECAY, P_RELEASE, P_DAMP, P_DISP, P_STRIKE,
-    P_HMASS, P_HSTIFF, P_HEXP, P_HVMAX, P_INJ, P_BODY, P_MASTER, P_COUNT
+    P_HMASS, P_HSTIFF, P_HEXP, P_VHARD, P_HVMAX, P_INJ, P_BODY, P_MASTER, P_COUNT
 };
 
 typedef struct {
@@ -52,6 +52,7 @@ static const pdesc PD[P_COUNT] = {
     [P_HMASS]   = { "Hammer mass",     0.0005, 0.05,   1.1,    1, "%.2f", 1000.0, "g" },
     [P_HSTIFF]  = { "Hammer stiffness",1.0e4,  1.0e10, 1.4,    1, "%.2e", 1.0,    ""  },
     [P_HEXP]    = { "Hammer exponent", 1.5,    4.0,    0.1,    0, "%.2f", 1.0,    ""  },
+    [P_VHARD]   = { "Vel->brightness", 0.0,    2.5,    0.1,    0, "%.2f", 1.0,    ""  },
     [P_HVMAX]   = { "Hammer vmax",     0.5,    20.0,   0.5,    0, "%.2f", 1.0,    ""  },
     [P_INJ]     = { "Injection",       1.0e-7, 1.0e-3, 1.3,    1, "%.2e", 1.0,    ""  },
     [P_BODY]    = { "Body (soundboard)",0.0,   1.5,    0.05,   0, "%.2f", 1.0,    ""  },
@@ -74,6 +75,7 @@ static void vals_from_defaults(void)
     g_vals[P_HMASS]   = p.hammer_mass;
     g_vals[P_HSTIFF]  = p.hammer_stiffness;
     g_vals[P_HEXP]    = p.hammer_exponent;
+    g_vals[P_VHARD]   = p.hammer_vel_hardness;
     g_vals[P_HVMAX]   = p.hammer_vmax;
     g_vals[P_INJ]     = p.injection;
     g_vals[P_BODY]    = 0.9;      /* matches pf_board_defaults mix */
@@ -93,6 +95,7 @@ static void apply_params(pf_engine *e)
     p.hammer_mass         = g_vals[P_HMASS];
     p.hammer_stiffness    = g_vals[P_HSTIFF];
     p.hammer_exponent     = g_vals[P_HEXP];
+    p.hammer_vel_hardness = g_vals[P_VHARD];
     p.hammer_vmax         = g_vals[P_HVMAX];
     p.injection           = g_vals[P_INJ];
     pf_engine_set_params(e, &p);

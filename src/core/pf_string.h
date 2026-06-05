@@ -39,9 +39,12 @@ typedef struct {
 
     /* Nonlinear felt hammer */
     double hammer_mass;          /* kg-ish */
-    double hammer_stiffness;     /* K in F = K*delta^p */
+    double hammer_stiffness;     /* K in F = K*delta^p (at the reference velocity) */
     double hammer_exponent;      /* p, felt hardening (~2..3) */
     double hammer_vmax;          /* hammer launch velocity at velocity==1 */
+    double hammer_vel_hardness;  /* how strongly strike velocity stiffens the felt:
+                                  * K scales as (vel/0.6)^this. 0 = velocity-independent;
+                                  * higher = harder/brighter ff, softer/mellower pp. */
     double injection;            /* g_inj: force->displacement coupling per sample */
 
     double output_gain;          /* final scaling (host may re-normalize anyway) */
@@ -89,6 +92,8 @@ typedef struct pf_string {
     int    ham_contacted;        /* has been in compression at least once */
     double ham_pos, ham_vel;     /* hammer displacement / velocity */
     double ham_m, ham_K, ham_p;
+    double ham_K0;               /* base stiffness; strike scales ham_K from this */
+    double ham_vhard;            /* velocity -> stiffness exponent */
     double last_F;               /* warm-start for the implicit solve */
 
     double g_inj;

@@ -21,18 +21,21 @@
 typedef struct { int note; double vel; double t; } event;
 
 static const event SONG[] = {
-    { 33, 0.90, 0.0 },   /* A1  (~55 Hz)  - lots of stretched partials */
-    { 45, 0.85, 1.6 },   /* A2  (~110 Hz) */
-    { 69, 0.75, 3.2 },   /* A4  (440 Hz)  */
-    { 93, 0.75, 4.8 },   /* A6  (~1760 Hz)*/
-    /* a chord at the end (C4 / E4 / G4) */
-    { 60, 0.70, 6.4 },
-    { 64, 0.70, 6.4 },
-    { 67, 0.70, 6.4 },
+    /* a velocity staircase on one mid note (A3, ~220 Hz): pp -> ff. With
+     * velocity->brightness the timbre, not just the loudness, opens up. */
+    { 57, 0.10, 0.0 },
+    { 57, 0.25, 1.3 },
+    { 57, 0.45, 2.6 },
+    { 57, 0.65, 3.9 },
+    { 57, 0.85, 5.2 },
+    { 57, 1.00, 6.5 },
+    /* a soft then loud chord to hear it in context (C4 / E4 / G4) */
+    { 60, 0.18, 8.0 }, { 64, 0.18, 8.0 }, { 67, 0.18, 8.0 },
+    { 60, 0.95, 9.4 }, { 64, 0.95, 9.4 }, { 67, 0.95, 9.4 },
 };
 #define N_EVENTS ((int)(sizeof(SONG) / sizeof(SONG[0])))
 
-#define TOTAL_SECONDS 11.0
+#define TOTAL_SECONDS 14.0
 #define TOTAL_SAMPLES ((int)(TOTAL_SECONDS * SR))
 
 static double midi_to_hz(int note)
@@ -102,28 +105,32 @@ int main(void)
     printf("pfsynth render: %d events, %.1f s @ %d Hz\n",
            N_EVENTS, TOTAL_SECONDS, SR);
 
-    /* Full current model: coupled strings + strike-point comb -> mono mix. */
-    pf_string_params params; pf_string_defaults(&params, SR);
-    render_song(&params, buf, 1);
-
     pf_board_params bp;
     pf_board_defaults(&bp, SR);
-    printf("soundboard: %d modes  %.0f-%.0f Hz  mix=%.2f\n", bp.modes, bp.f_lo, bp.f_hi, bp.mix);
 
-    /* A/B for this milestone: the same body as a mono bank (L=R) vs the stereo
-     * pair (decorrelated L/R banks, centered dry). */
-    static pf_board       mono;   pf_board_init(&mono, &bp, SR);
-    static pf_board_stereo st;    pf_board_stereo_init(&st, &bp, SR);
-    for (int i = 0; i < TOTAL_SAMPLES; i++) {
-        double m = pf_board_tick(&mono, buf[i]);
-        smo[2 * i] = smo[2 * i + 1] = (float)m;
-        double l, r; pf_board_stereo_tick(&st, buf[i], &l, &r);
-        sst[2 * i] = (float)l; sst[2 * i + 1] = (float)r;
-    }
+    /* A/B for this milestone: a velocity staircase rendered with flat dynamics
+     * (velocity changes loudness only) vs velocity->brightness (it also opens the
+     * timbre). Both through the same stereo soundboard. */
+    pf_string_params pon;  pf_string_defaults(&pon, SR);                       /* default on */
+    pf_string_params poff = pon; poff.hammer_vel_hardness = 0.0;               /* flat */
+    printf("velocity->brightness hardness: on=%.2f off=%.2f\n",
+           pon.hammer_vel_hardness, poff.hammer_vel_hardness);
+
+    render_song(&poff, buf, 0);
+    { static pf_board_stereo st; pf_board_stereo_init(&st, &bp, SR);
+      for (int i = 0; i < TOTAL_SAMPLES; i++) {
+          double l, r; pf_board_stereo_tick(&st, buf[i], &l, &r);
+          smo[2 * i] = (float)l; smo[2 * i + 1] = (float)r; } }
+
+    render_song(&pon, buf, 1);
+    { static pf_board_stereo st; pf_board_stereo_init(&st, &bp, SR);
+      for (int i = 0; i < TOTAL_SAMPLES; i++) {
+          double l, r; pf_board_stereo_tick(&st, buf[i], &l, &r);
+          sst[2 * i] = (float)l; sst[2 * i + 1] = (float)r; } }
 
     int rc = 0;
-    rc |= finish_stereo("out_mono.wav", smo, TOTAL_SAMPLES, "mono  ");
-    rc |= finish_stereo(OUT_PATH,       sst, TOTAL_SAMPLES, "stereo");
+    rc |= finish_stereo("out_flat.wav", smo, TOTAL_SAMPLES, "flat ");
+    rc |= finish_stereo(OUT_PATH,       sst, TOTAL_SAMPLES, "vel  ");
 
     free(buf); free(sst); free(smo);
     return rc;

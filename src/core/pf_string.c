@@ -56,6 +56,7 @@ void pf_string_defaults(pf_string_params *p, double sample_rate)
     p->hammer_stiffness    = 4.5e7;    /* harder felt -> brighter, more present attack */
     p->hammer_exponent     = 2.3;
     p->hammer_vmax         = 5.0;
+    p->hammer_vel_hardness = 1.0;      /* velocity stiffens the felt: mellow pp, bright ff */
     /* force -> displacement injection per sample = dt/(2Z), Z ~ 2 */
     p->injection           = 1.0 / (2.0 * 2.0) / sample_rate;
 
@@ -165,11 +166,13 @@ void pf_string_init(pf_string *s, const pf_string_params *p, double f0)
     }
 
     /* shared hammer */
-    s->ham_m    = p->hammer_mass;
-    s->ham_K    = p->hammer_stiffness;
-    s->ham_p    = p->hammer_exponent;
-    s->g_inj    = p->injection;
-    s->out_gain = p->output_gain;
+    s->ham_m     = p->hammer_mass;
+    s->ham_K0    = p->hammer_stiffness;        /* base; strike scales by velocity */
+    s->ham_K     = p->hammer_stiffness;
+    s->ham_p     = p->hammer_exponent;
+    s->ham_vhard = p->hammer_vel_hardness;
+    s->g_inj     = p->injection;
+    s->out_gain  = p->output_gain;
 
     /* harness mirrors (string 0) */
     s->dl_len = s->str[0].dl_len;
@@ -180,6 +183,15 @@ void pf_string_strike(pf_string *s, double velocity)
 {
     if (velocity < 0.0) velocity = 0.0;
     if (velocity > 1.0) velocity = 1.0;
+
+    /* Velocity stiffens the felt: a fast strike meets a harder hammer (shorter
+     * contact -> brighter), a slow one a softer hammer (longer contact -> mellow).
+     * This is the main expressive dynamics -> timbre coupling. */
+    double vh = pow((velocity > 1e-4 ? velocity : 1e-4) / 0.6, s->ham_vhard);
+    if (vh < 0.1) vh = 0.1;
+    if (vh > 4.0) vh = 4.0;
+    s->ham_K = s->ham_K0 * vh;
+
     s->ham_pos   = 0.0;
     s->ham_vel   = velocity * /* launch toward the string */ 5.0;
     s->ham_engaged   = 1;

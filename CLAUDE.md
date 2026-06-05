@@ -49,6 +49,11 @@ sharing one nonlinear felt hammer. Each loop is:
   `δ`, exponent `p ≈ 2–3`). The hammer–string interaction is a delay-free loop (force depends
   on string velocity depends on force); it's resolved per sample with an **implicit Newton
   step**. The hammer injects the excitation — this is the attack and the soul of the sound.
+  **Velocity → brightness**: the felt stiffness `K` scales with strike velocity as
+  `(vel/0.6)^hammer_vel_hardness`, so a fast strike meets a harder hammer (shorter contact →
+  brighter, clangy ff) and a slow one a softer hammer (longer contact → mellow pp). This is
+  the main dynamics→timbre coupling; without it, velocity only changes loudness. (The rich
+  soundboard masks some of it in the mix — a trade against the body fullness.)
 - **Strike-point comb** — the hammer hits at `strike_pos` (a fraction of the string length,
   ~1/8), so partials with a node there can't be excited. Modeled as the injected excitation
   being high-passed by `(1 − z^−β)`, `β = strike_pos·period`: the delayed term is the wave
@@ -97,8 +102,8 @@ centered while the mid/treble body opens up — `stereo_width` (~0.2) sets the a
 what the host actually runs over the mix; the offline harness writes a stereo `out.wav`.
 
 ### Deferred to later milestones
-Sympathetic resonance, per-register decay/velocity-brightness tuning, the rest of the
-instrument family, the serialized song format.
+Sympathetic resonance, per-register decay tuning, the rest of the instrument family, the
+serialized song format.
 
 ## Host tooling
 
@@ -167,8 +172,8 @@ make clean
 No external dependencies. The render harness in `src/host/main.c` is driven by a hardcoded
 `{note, velocity, time_sec}` event list (foreshadowing the serialized song format) and
 peak-normalizes the final buffer so output is always audible regardless of absolute model
-scale. It writes two stereo files for an A/B: `out_mono.wav` (mono body, L=R) and `out.wav`
-(the stereo body) — both the full model (coupled strings + strike comb + soundboard).
+scale. The hardcoded SONG is currently a velocity staircase; it writes two stereo files for
+an A/B: `out_flat.wav` (velocity→brightness off — loudness only) and `out.wav` (on).
 
 ## Conventions
 
