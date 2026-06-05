@@ -49,6 +49,12 @@ sharing one nonlinear felt hammer. Each loop is:
   `δ`, exponent `p ≈ 2–3`). The hammer–string interaction is a delay-free loop (force depends
   on string velocity depends on force); it's resolved per sample with an **implicit Newton
   step**. The hammer injects the excitation — this is the attack and the soul of the sound.
+- **Strike-point comb** — the hammer hits at `strike_pos` (a fraction of the string length,
+  ~1/8), so partials with a node there can't be excited. Modeled as the injected excitation
+  being high-passed by `(1 − z^−β)`, `β = strike_pos·period`: the delayed term is the wave
+  reflecting off the near end back to the hammer (which feels it, so the comb falls out of
+  the physics, not a post-EQ). Notches partials `n = 1/strike_pos, 2/strike_pos, …` and
+  boosts the low-mid partials between — the characteristic woody piano shape. `0` = off.
 
 The voice also has a **damper**: `pf_string_release()` switches the loop to a fast
 `release_t60` decay, modeling the felt damper falling on note-off. A held sustain pedal
@@ -83,8 +89,8 @@ incompressible) — so it stays tiny. The host exposes a live **Body** mix knob;
 bypasses it to A/B against the bare string.
 
 ### Deferred to later milestones
-Sympathetic resonance, hammer strike-point comb, per-register decay/velocity-brightness
-tuning, stereo, the rest of the instrument family, the serialized song format.
+Sympathetic resonance, per-register decay/velocity-brightness tuning, stereo, the rest of
+the instrument family, the serialized song format.
 
 ## Host tooling
 
@@ -153,8 +159,8 @@ make clean
 No external dependencies. The render harness in `src/host/main.c` is driven by a hardcoded
 `{note, velocity, time_sec}` event list (foreshadowing the serialized song format) and
 peak-normalizes the final buffer so output is always audible regardless of absolute model
-scale. It writes two files for an A/B: `out_1string.wav` (one string per note) and
-`out.wav` (the default coupled pair), both through the soundboard.
+scale. It writes two files for an A/B: `out_nobody.wav` (strings only) and `out.wav` (the
+full model — coupled strings + strike comb + soundboard).
 
 ## Conventions
 

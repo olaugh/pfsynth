@@ -1,6 +1,6 @@
 build/
 out.wav
-out_1string.wav
+out_nobody.wav
 *.o
 maestro/
 *.dSYM/

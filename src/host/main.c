@@ -105,24 +105,20 @@ int main(void)
     printf("pfsynth render: %d events, %.1f s @ %d Hz\n",
            N_EVENTS, TOTAL_SECONDS, SR);
 
-    /* A/B for this milestone: single string vs the coupled pair, both through
-     * the soundboard, so the difference you hear is purely string coupling
-     * (beating + two-stage decay). */
-    pf_string_params p2; pf_string_defaults(&p2, SR);       /* coupled (default) */
-    pf_string_params p1 = p2; p1.unison_strings = 1;        /* single string */
+    /* Full current model: coupled strings + strike-point comb. Render once,
+     * keep a no-soundboard copy, then run the body over the main buffer so the
+     * A/B (out_nobody.wav vs out.wav) shows the body's contribution to richness. */
+    pf_string_params params; pf_string_defaults(&params, SR);
+    render_song(&params, buf, 1);
+    memcpy(buf1, buf, (size_t)TOTAL_SAMPLES * sizeof(float));
 
-    printf("[2-string coupled, with body]\n");
-    render_song(&p2, buf, 1);
     printf("soundboard: %d modes  %.0f-%.0f Hz  mix=%.2f\n", bp.modes, bp.f_lo, bp.f_hi, bp.mix);
-
-    render_song(&p1, buf1, 0);
-
-    pf_board_init(&board, &bp, SR);  pf_board_process(&board, buf,  TOTAL_SAMPLES);
-    pf_board_init(&board, &bp, SR);  pf_board_process(&board, buf1, TOTAL_SAMPLES);
+    pf_board_init(&board, &bp, SR);
+    pf_board_process(&board, buf, TOTAL_SAMPLES);
 
     int rc = 0;
-    rc |= finish("out_1string.wav", buf1, TOTAL_SAMPLES, "1str ");
-    rc |= finish(OUT_PATH,          buf,  TOTAL_SAMPLES, "2str ");
+    rc |= finish("out_nobody.wav", buf1, TOTAL_SAMPLES, "bare ");
+    rc |= finish(OUT_PATH,         buf,  TOTAL_SAMPLES, "full ");
 
     free(buf);
     free(buf1);

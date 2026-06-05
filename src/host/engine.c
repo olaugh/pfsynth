@@ -22,7 +22,7 @@ void pf_engine_init(pf_engine *e, double sr)
     memset(e, 0, sizeof *e);
     e->sr = sr;
     pf_string_defaults(&e->params, sr);
-    e->master_gain = 700.0;    /* makeup gain: core peaks ~3e-4, lifted ~4x by the body */
+    e->master_gain = 500.0;    /* makeup gain: core peaks ~3e-4, lifted by the body */
     pf_board_params bp;
     pf_board_defaults(&bp, sr);
     pf_board_init(&e->board, &bp, sr);

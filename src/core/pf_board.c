@@ -33,15 +33,15 @@ static double rnd01(unsigned *s)
 void pf_board_defaults(pf_board_params *p, double sample_rate)
 {
     (void)sample_rate;
-    p->modes = 32;
-    p->f_lo  = 95.0;     /* lowest body resonance (above the deep boom region) */
-    p->f_hi  = 5500.0;   /* top of the radiating range */
-    p->t_lo  = 0.13;     /* low modes give a short body "thump", not a drone ... */
-    p->t_hi  = 0.04;     /* ... high modes are shorter still, coloring the attack */
-    p->tilt  = -1.5;     /* dB/oct: gently darker toward the top, like radiation */
+    p->modes = 40;       /* denser bank reads as a richer, more solid body */
+    p->f_lo  = 85.0;     /* lowest body resonance */
+    p->f_hi  = 6000.0;   /* top of the radiating range */
+    p->t_lo  = 0.18;     /* low modes ring enough to add body weight ... */
+    p->t_hi  = 0.05;     /* ... high modes are shorter, coloring the attack */
+    p->tilt  = -1.2;     /* dB/oct: gently darker toward the top, like radiation */
     p->color = 0.6;      /* gain irregularity so it reads as wood, not a formant */
     p->dry   = 1.0;      /* keep the full string tone present */
-    p->mix   = 0.5;      /* body layer level (audition knob in the host) */
+    p->mix   = 0.9;      /* body layer level: fuller, closer (audition knob in host) */
     p->seed  = 0x51A4E3u;
 }
 

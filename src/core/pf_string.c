@@ -50,6 +50,7 @@ void pf_string_defaults(pf_string_params *p, double sample_rate)
     p->unison_strings      = 2;        /* two coupled loops -> beating + double decay */
     p->unison_detune       = 2.0;      /* cents of spread; sets the beat rate */
     p->coupling            = 0.006;    /* bridge load: common-mode (prompt) decay rate */
+    p->strike_pos          = 0.12;     /* hammer ~1/8 along the string (0 = off) */
 
     p->hammer_mass         = 4.0e-3;   /* ~4 g */
     p->hammer_stiffness    = 6.0e6;
@@ -156,6 +157,13 @@ void pf_string_init(pf_string *s, const pf_string_params *p, double f0)
         s->str[k].ham_gain = 1.0 - 0.04 * (double)k;
     }
 
+    /* strike-point comb delay: beta = strike_pos * (period in samples) */
+    s->strike_beta = 0;
+    if (p->strike_pos > 0.0 && p->strike_pos < 0.5) {
+        int beta = (int)floor(p->strike_pos * (p->sample_rate / f0) + 0.5);
+        if (beta >= 1 && beta < PF_MAX_DELAY) s->strike_beta = beta;
+    }
+
     /* shared hammer */
     s->ham_m    = p->hammer_mass;
     s->ham_K    = p->hammer_stiffness;
@@ -226,14 +234,26 @@ void pf_string_process(pf_string *s, float *out, int n)
         /* the hammer feels the mean string displacement at the contact point */
         double ys_drive = S / N;
 
+        /* Strike-point comb: the excitation injected beta samples ago has by now
+         * reflected off the near termination and returned, inverted, to the
+         * contact point. The hammer feels it and the loop receives the
+         * difference -> a (1 - z^-beta) comb that notches partials with a node
+         * at the strike point. */
+        double echo = 0.0;
+        if (s->strike_beta) {
+            int hi = s->strike_hpos - s->strike_beta;
+            if (hi < 0) hi += PF_MAX_DELAY;
+            echo = s->strike_hist[hi];
+        }
+
         /* nonlinear felt hammer: resolve the delay-free force loop implicitly.
          * The injected force raises the local string displacement by g_inj*F,
          * which reduces the compression that produced it:
-         *     F = K * (delta0 - g_inj*F)^p ,  delta0 = ham_pos - ys_drive
+         *     F = K * (delta0 - g_inj*F)^p ,  delta0 = ham_pos - ys_drive + echo
          * Solve with a few Newton iterations, warm-started from last sample. */
         double F = 0.0;
         if (s->ham_engaged) {
-            double d0 = s->ham_pos - ys_drive;
+            double d0 = s->ham_pos - ys_drive + echo;
             if (d0 > 0.0) {
                 F = s->last_F;
                 for (k = 0; k < 5; k++) {
@@ -264,10 +284,18 @@ void pf_string_process(pf_string *s, float *out, int n)
          * mode (strings out of phase, S~0) is nearly lossless -> the slow singing
          * aftersound. The cent-scale detune makes the loops beat and bleeds
          * energy from the prompt into the aftersound. */
+        double e_raw = s->g_inj * F;          /* raw hammer-force injection */
+        double e_inj = e_raw - echo;          /* (1 - z^-beta) strike-point comb */
+        if (s->strike_beta) {
+            s->strike_hist[s->strike_hpos] = (float)e_raw;
+            s->strike_hpos++;
+            if (s->strike_hpos >= PF_MAX_DELAY) s->strike_hpos = 0;
+        }
+
         double junc_sum = 0.0;
         for (k = 0; k < N; k++) {
             pf_substring *ss = &s->str[k];
-            double in_k = b[k] - mu * S + s->g_inj * F * ss->ham_gain;
+            double in_k = b[k] - mu * S + e_inj * ss->ham_gain;
             ss->dl[ss->dl_pos] = (float)in_k;
             ss->dl_pos++;
             if (ss->dl_pos >= PF_MAX_DELAY) ss->dl_pos = 0;

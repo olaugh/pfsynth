@@ -33,6 +33,10 @@ typedef struct {
     double unison_detune;        /* total pitch spread across them, in cents */
     double coupling;             /* bridge-load coupling; sets the prompt-decay rate */
 
+    /* Hammer strike point: fraction of the string length (~1/8). Notches the
+     * partials with a node there (n = 1/pos, 2/pos, ...). 0 = no comb. */
+    double strike_pos;
+
     /* Nonlinear felt hammer */
     double hammer_mass;          /* kg-ish */
     double hammer_stiffness;     /* K in F = K*delta^p */
@@ -72,6 +76,13 @@ typedef struct pf_string {
     int          n_strings;
     pf_substring str[PF_MAX_STRINGS];
     double       couple;         /* bridge-load coupling coefficient (mu) */
+
+    /* Hammer strike-point comb: the injected excitation is high-passed by
+     * (1 - z^-beta), notching partials with a node at the strike point. The
+     * delayed term is the wave reflecting off the near end back to the hammer. */
+    int    strike_beta;          /* comb delay (samples); 0 = disabled */
+    int    strike_hpos;          /* excitation-history write cursor */
+    float  strike_hist[PF_MAX_DELAY];
 
     /* Nonlinear felt hammer (shared across the coupled strings). */
     int    ham_engaged;          /* hammer is in flight / touching */

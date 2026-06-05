@@ -29,7 +29,7 @@
 /* ---------------- parameter editor model ---------------- */
 
 enum {
-    P_INHARM, P_DECAY, P_RELEASE, P_DAMP, P_DISP,
+    P_INHARM, P_DECAY, P_RELEASE, P_DAMP, P_DISP, P_STRIKE,
     P_HMASS, P_HSTIFF, P_HEXP, P_HVMAX, P_INJ, P_BODY, P_MASTER, P_COUNT
 };
 
@@ -48,6 +48,7 @@ static const pdesc PD[P_COUNT] = {
     [P_RELEASE] = { "Release T60",     0.03,   3.0,    0.02,   0, "%.2f", 1.0,    "s" },
     [P_DAMP]    = { "Damping",         0.0,    0.85,   0.02,   0, "%.2f", 1.0,    ""  },
     [P_DISP]    = { "Dispersion secs", 0.0,    16.0,   1.0,    0, "%.0f", 1.0,    ""  },
+    [P_STRIKE]  = { "Strike pos",      0.0,    0.49,   0.01,   0, "%.2f", 1.0,    ""  },
     [P_HMASS]   = { "Hammer mass",     0.0005, 0.05,   1.1,    1, "%.2f", 1000.0, "g" },
     [P_HSTIFF]  = { "Hammer stiffness",1.0e4,  1.0e10, 1.4,    1, "%.2e", 1.0,    ""  },
     [P_HEXP]    = { "Hammer exponent", 1.5,    4.0,    0.1,    0, "%.2f", 1.0,    ""  },
@@ -69,13 +70,14 @@ static void vals_from_defaults(void)
     g_vals[P_RELEASE] = p.release_t60;
     g_vals[P_DAMP]    = p.damping;
     g_vals[P_DISP]    = p.dispersion_sections;
+    g_vals[P_STRIKE]  = p.strike_pos;
     g_vals[P_HMASS]   = p.hammer_mass;
     g_vals[P_HSTIFF]  = p.hammer_stiffness;
     g_vals[P_HEXP]    = p.hammer_exponent;
     g_vals[P_HVMAX]   = p.hammer_vmax;
     g_vals[P_INJ]     = p.injection;
-    g_vals[P_BODY]    = 0.5;      /* matches pf_board_defaults mix */
-    g_vals[P_MASTER]  = 700.0;    /* lower than before: the body lifts level ~4x */
+    g_vals[P_BODY]    = 0.9;      /* matches pf_board_defaults mix */
+    g_vals[P_MASTER]  = 500.0;    /* lower than before: the richer body lifts level */
 }
 
 static void apply_params(pf_engine *e)
@@ -87,6 +89,7 @@ static void apply_params(pf_engine *e)
     p.release_t60         = g_vals[P_RELEASE];
     p.damping             = g_vals[P_DAMP];
     p.dispersion_sections = (int)(g_vals[P_DISP] + 0.5);
+    p.strike_pos          = g_vals[P_STRIKE];
     p.hammer_mass         = g_vals[P_HMASS];
     p.hammer_stiffness    = g_vals[P_HSTIFF];
     p.hammer_exponent     = g_vals[P_HEXP];
