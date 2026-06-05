@@ -75,16 +75,18 @@ patches and playing back MIDI. It is strictly dev-machine tooling — none of it
 - `src/host/tui.c` — the notcurses UI: live patch editor, maestro file browser, transport,
   and a QWERTY "piano" (z-row / q-row) for playing by hand. Real key-up events are used
   when the terminal supports them (kitty keyboard protocol); otherwise notes auto-release
-  after ~800 ms so it works everywhere.
+  after ~800 ms so it works everywhere. The MIDI files carry no titles, so the browser and
+  a `/` search view read composer / title / duration from the dataset CSV
+  (`maestro-v3.0.0.csv`), parsed once at startup and keyed by relative path.
 
 ```
 make tui                         # build build/pfsynth-tui
 ./build/pfsynth-tui [lib-dir]    # default lib: maestro/midi/maestro-v3.0.0
 ```
 
-TUI keys: TAB switch pane · up/dn select · left/right adjust param · ENTER load file ·
-SPACE play/pause · `[` `]` seek · `p` sustain pedal · `+`/`-` octave · letter keys play ·
-`Q` quit.
+TUI keys: TAB switch pane · up/dn select · left/right adjust param · `/` search by
+composer/title · ENTER load file · SPACE play/pause · `[` `]` seek · `p` sustain pedal ·
+`+`/`-` octave · letter keys play · ESC exit search · `Q` quit.
 
 The TUI depends on **notcurses** (homebrew keg at `/opt/homebrew/opt/notcurses`, no
 pkg-config installed so the path is hardcoded in the Makefile) and macOS CoreAudio. The
