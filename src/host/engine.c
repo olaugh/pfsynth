@@ -22,7 +22,10 @@ void pf_engine_init(pf_engine *e, double sr)
     memset(e, 0, sizeof *e);
     e->sr = sr;
     pf_string_defaults(&e->params, sr);
-    e->master_gain = 2500.0;   /* makeup gain: core peaks ~3e-4 -> near unity */
+    e->master_gain = 700.0;    /* makeup gain: core peaks ~3e-4, lifted ~4x by the body */
+    pf_board_params bp;
+    pf_board_defaults(&bp, sr);
+    pf_board_init(&e->board, &bp, sr);
     pthread_mutex_init(&e->lock, NULL);
     rebuild_templates(e);
 }
@@ -47,6 +50,13 @@ void pf_engine_set_master(pf_engine *e, double gain)
 {
     pthread_mutex_lock(&e->lock);
     e->master_gain = gain;
+    pthread_mutex_unlock(&e->lock);
+}
+
+void pf_engine_set_body(pf_engine *e, double mix)
+{
+    pthread_mutex_lock(&e->lock);
+    e->board.mix = mix;        /* just a runtime scalar; modes don't need rebuilding */
     pthread_mutex_unlock(&e->lock);
 }
 
@@ -122,6 +132,7 @@ void pf_engine_panic(pf_engine *e)
     pthread_mutex_lock(&e->lock);
     for (int i = 0; i < PF_POLY; i++) e->slots[i].used = 0;
     e->pedal = 0;
+    pf_board_reset(&e->board);
     pthread_mutex_unlock(&e->lock);
 }
 
@@ -137,6 +148,7 @@ void pf_engine_load(pf_engine *e, pf_song *song)
     e->ev_cursor = 0;
     for (int i = 0; i < PF_POLY; i++) e->slots[i].used = 0;
     e->pedal = 0;
+    pf_board_reset(&e->board);
     pthread_mutex_unlock(&e->lock);
 }
 
@@ -159,6 +171,7 @@ void pf_engine_seek(pf_engine *e, double seconds)
         e->play_pos = seconds;
         for (int i = 0; i < PF_POLY; i++) e->slots[i].used = 0;
         e->pedal = 0;
+        pf_board_reset(&e->board);
         /* re-place the event cursor */
         int c = 0;
         while (c < e->song.n && e->song.ev[c].t < seconds) c++;
@@ -209,8 +222,10 @@ static void render_chunk(pf_engine *e, float *out, int n)
 
     double g = e->master_gain;
     for (int j = 0; j < n; j++) {
-        out[2 * j]     = (float)tanh(out[2 * j]     * g);  /* gentle safety clip */
-        out[2 * j + 1] = (float)tanh(out[2 * j + 1] * g);
+        /* one shared soundboard over the (mono) mix, then makeup + safety clip */
+        double s = tanh(pf_board_tick(&e->board, out[2 * j]) * g);
+        out[2 * j]     = (float)s;
+        out[2 * j + 1] = (float)s;
     }
     e->clock += (unsigned long)n;
 }

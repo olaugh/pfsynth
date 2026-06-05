@@ -30,7 +30,7 @@
 
 enum {
     P_INHARM, P_DECAY, P_RELEASE, P_DAMP, P_DISP,
-    P_HMASS, P_HSTIFF, P_HEXP, P_HVMAX, P_INJ, P_MASTER, P_COUNT
+    P_HMASS, P_HSTIFF, P_HEXP, P_HVMAX, P_INJ, P_BODY, P_MASTER, P_COUNT
 };
 
 typedef struct {
@@ -53,6 +53,7 @@ static const pdesc PD[P_COUNT] = {
     [P_HEXP]    = { "Hammer exponent", 1.5,    4.0,    0.1,    0, "%.2f", 1.0,    ""  },
     [P_HVMAX]   = { "Hammer vmax",     0.5,    20.0,   0.5,    0, "%.2f", 1.0,    ""  },
     [P_INJ]     = { "Injection",       1.0e-7, 1.0e-3, 1.3,    1, "%.2e", 1.0,    ""  },
+    [P_BODY]    = { "Body (soundboard)",0.0,   1.5,    0.05,   0, "%.2f", 1.0,    ""  },
     [P_MASTER]  = { "Master gain",     50.0,   50000.0,1.25,   1, "%.0f", 1.0,    ""  },
 };
 
@@ -73,7 +74,8 @@ static void vals_from_defaults(void)
     g_vals[P_HEXP]    = p.hammer_exponent;
     g_vals[P_HVMAX]   = p.hammer_vmax;
     g_vals[P_INJ]     = p.injection;
-    g_vals[P_MASTER]  = 2500.0;
+    g_vals[P_BODY]    = 0.5;      /* matches pf_board_defaults mix */
+    g_vals[P_MASTER]  = 700.0;    /* lower than before: the body lifts level ~4x */
 }
 
 static void apply_params(pf_engine *e)
@@ -91,6 +93,7 @@ static void apply_params(pf_engine *e)
     p.hammer_vmax         = g_vals[P_HVMAX];
     p.injection           = g_vals[P_INJ];
     pf_engine_set_params(e, &p);
+    pf_engine_set_body(e, g_vals[P_BODY]);
     pf_engine_set_master(e, g_vals[P_MASTER]);
 }
 

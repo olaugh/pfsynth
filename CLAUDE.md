@@ -53,9 +53,25 @@ The voice also has a **damper**: `pf_string_release()` switches the loop to a fa
 `release_t60` decay, modeling the felt damper falling on note-off. A held sustain pedal
 just means the host doesn't call it.
 
+### Soundboard (`pf_board`) — the body resonance
+A bare string is a thin, synthetic-sounding source; in a real piano you mostly hear the
+**soundboard** the strings drive. `pf_board` (core) models that body as a parallel bank of
+~32 second-order modal resonators (a coded modal impulse response — log-spaced mode
+frequencies with deterministic jitter, low modes ringing longer than high) added on top of
+a dry path, i.e. a parallel resonant EQ that *colors* the string tone with the body.
+
+This is **commuted synthesis** done the cheap way: after the hammer the instrument is ~LTI
+and there is exactly one shared soundboard, so filtering the summed mix of all voices
+through one body is mathematically identical to convolving each note's excitation with the
+body — but costs one filter bank, not one per voice. The host runs a single `pf_board` over
+the final mix (`pf_engine` for live playback, the offline harness for `out.wav`). The whole
+body is generated from a few `pf_board_params` constants — no sampled IR (which would be
+incompressible) — so it stays tiny. The host exposes a live **Body** mix knob; `mix = 0`
+bypasses it to A/B against the bare string.
+
 ### Deferred to later milestones
-Multi-string coupling (beating / double decay), commuted soundboard, the rest of the
-instrument family, the serialized song format.
+Multi-string coupling (beating / double decay), sympathetic resonance, hammer strike-point
+comb, the rest of the instrument family, the serialized song format.
 
 ## Host tooling
 
@@ -103,6 +119,15 @@ pf_string_process(&voice, out, n);         // ADDITIVE mix of n samples into out
 `pf_string_process` is **additive** — chords/polyphony are just multiple voices summed into
 the same buffer. The host zeroes the buffer first.
 
+The shared body filter (`src/core/pf_board.h`) sits at the output, run once over the mix:
+
+```c
+pf_board_defaults(&bp, sample_rate);       // sensible piano-body defaults
+pf_board_init(&board, &bp, sample_rate);   // build the modal bank
+y = pf_board_tick(&board, x);              // one sample (or pf_board_process over a block)
+pf_board_reset(&board);                    // clear ring (on load/seek/panic)
+```
+
 ## Build
 
 ```
@@ -115,7 +140,8 @@ make clean
 No external dependencies. The render harness in `src/host/main.c` is driven by a hardcoded
 `{note, velocity, time_sec}` event list (foreshadowing the serialized song format) and
 peak-normalizes the final buffer so output is always audible regardless of absolute model
-scale.
+scale. It writes two files for an A/B: `out_dry.wav` (bare string) and `out.wav` (same mix
+through the modal soundboard).
 
 ## Conventions
 

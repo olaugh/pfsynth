@@ -13,6 +13,7 @@
 #define PF_ENGINE_H
 
 #include "../core/pf_string.h"
+#include "../core/pf_board.h"
 #include "midi.h"
 #include <pthread.h>
 
@@ -38,6 +39,7 @@ typedef struct {
     int     pedal;                /* sustain pedal down */
     unsigned long clock;
     double  master_gain;
+    pf_board board;               /* one shared modal soundboard over the mix */
 
     /* sequencer */
     pf_song song;
@@ -56,6 +58,7 @@ void pf_engine_destroy(pf_engine *e);
 /* Replace patch parameters and rebuild the note templates. */
 void pf_engine_set_params(pf_engine *e, const pf_string_params *p);
 void pf_engine_set_master(pf_engine *e, double gain);
+void pf_engine_set_body(pf_engine *e, double mix);   /* soundboard amount, 0 = bypass */
 
 /* Live triggers (UI keyboard). velocity 1..127 like MIDI. */
 void pf_engine_note_on(pf_engine *e, int note, int vel);

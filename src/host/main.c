@@ -6,6 +6,7 @@
  * model can be sanity-checked without listening.
  */
 #include "../core/pf_string.h"
+#include "../core/pf_board.h"
 #include "wav.h"
 
 #include <stdio.h>
@@ -37,6 +38,32 @@ static const event SONG[] = {
 static double midi_to_hz(int note)
 {
     return 440.0 * pow(2.0, (note - 69) / 12.0);
+}
+
+/* print stats, NaN-check, peak-normalize, and write one WAV. 0 = ok. */
+static int finish(const char *path, float *buf, int n, const char *tag)
+{
+    double peak = 0.0, sumsq = 0.0;
+    for (int i = 0; i < n; i++) {
+        float v = buf[i];
+        if (v != v) { fprintf(stderr, "ERROR: NaN in %s output\n", tag); return 2; }
+        double a = fabs(v);
+        if (a > peak) peak = a;
+        sumsq += (double)v * v;
+    }
+    double rms = sqrt(sumsq / n);
+    printf("  [%s] pre-norm peak=%.4g  rms=%.4g\n", tag, peak, rms);
+
+    if (peak > 0.0) {
+        float g = (float)(0.89 / peak);   /* ~ -1 dBFS headroom */
+        for (int i = 0; i < n; i++) buf[i] *= g;
+    }
+    if (wav_write_mono16(path, buf, n, SR)) {
+        fprintf(stderr, "ERROR: failed to write %s\n", path);
+        return 3;
+    }
+    printf("  wrote %s\n", path);
+    return 0;
 }
 
 int main(void)
@@ -71,33 +98,27 @@ int main(void)
                1000.0 * voice.dbg_contact_samples / SR);
     }
 
-    /* stats + peak normalize */
-    double peak = 0.0, sumsq = 0.0;
-    int nan = 0;
-    for (int i = 0; i < TOTAL_SAMPLES; i++) {
-        float v = buf[i];
-        if (v != v) { nan = 1; break; }
-        double a = fabs(v);
-        if (a > peak) peak = a;
-        sumsq += (double)v * v;
-    }
-    if (nan) { fprintf(stderr, "ERROR: NaN in output\n"); free(buf); return 2; }
+    /* Keep a dry copy for an A/B, then run the shared modal soundboard over the
+     * whole mix. Filtering the summed mix == convolving each note's excitation
+     * with the one shared body (commuted synthesis), since the body is LTI. */
+    float *dry = (float *)malloc((size_t)TOTAL_SAMPLES * sizeof(float));
+    if (!dry) { fprintf(stderr, "oom\n"); free(buf); return 1; }
+    memcpy(dry, buf, (size_t)TOTAL_SAMPLES * sizeof(float));
 
-    double rms = sqrt(sumsq / TOTAL_SAMPLES);
-    printf("pre-norm: peak=%.4g  rms=%.4g\n", peak, rms);
+    pf_board_params bp;
+    pf_board_defaults(&bp, SR);
+    static pf_board board;
+    pf_board_init(&board, &bp, SR);
+    printf("soundboard: %d modes  %.0f-%.0f Hz  dry=%.2f mix=%.2f\n",
+           bp.modes, bp.f_lo, bp.f_hi, bp.dry, bp.mix);
+    pf_board_process(&board, buf, TOTAL_SAMPLES);
 
-    if (peak > 0.0) {
-        float g = (float)(0.89 / peak);   /* ~ -1 dBFS headroom */
-        for (int i = 0; i < TOTAL_SAMPLES; i++) buf[i] *= g;
-    }
+    /* stats + peak normalize + write, for one buffer */
+    int rc = 0;
+    rc |= finish("out_dry.wav", dry, TOTAL_SAMPLES, "dry  ");
+    rc |= finish(OUT_PATH,      buf, TOTAL_SAMPLES, "body ");
 
-    if (wav_write_mono16(OUT_PATH, buf, TOTAL_SAMPLES, SR)) {
-        fprintf(stderr, "ERROR: failed to write %s\n", OUT_PATH);
-        free(buf);
-        return 3;
-    }
-    printf("wrote %s (%.1f s, %d samples)\n", OUT_PATH, TOTAL_SECONDS, TOTAL_SAMPLES);
-
+    free(dry);
     free(buf);
-    return 0;
+    return rc;
 }
