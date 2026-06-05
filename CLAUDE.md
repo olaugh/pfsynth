@@ -153,8 +153,9 @@ make tui                         # build build/pfsynth-tui
 ```
 
 TUI keys: TAB switch pane · up/dn select · left/right adjust param · `/` search by
-composer/title · ENTER load file · SPACE play/pause · `[` `]` seek · ESC exit search ·
-`Q` quit.
+composer/title · ENTER load file · SPACE play/pause · `[` `]` seek · ESC up a directory
+(quits at the library root / on the params pane, and exits search) · `Q` quit (both via a
+confirmation modal).
 
 The TUI depends on **notcurses** (homebrew keg at `/opt/homebrew/opt/notcurses`, no
 pkg-config installed so the path is hardcoded in the Makefile) and macOS CoreAudio. The

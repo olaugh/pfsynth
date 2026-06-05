@@ -172,6 +172,12 @@ static void list_dir(void)
     qsort(g_entries, (size_t)g_nentries, sizeof(entry), ent_cmp);
 }
 
+/* at the top of the browsable tree (the library root, or the filesystem root)? */
+static int at_top(void)
+{
+    return strcmp(g_dir, g_lib_root) == 0 || strcmp(g_dir, "/") == 0;
+}
+
 static void go_parent(void)
 {
     char *slash = strrchr(g_dir, '/');
@@ -308,6 +314,7 @@ static const meta_row *entry_meta(const entry *en)
 
 /* ---------------- search view (by composer / title, across the whole set) ------- */
 
+static int   g_confirm;                 /* quit-confirmation modal is up */
 static int   g_search;                  /* search mode active */
 static char  g_query[128];
 static int  *g_results;                 /* indices into g_meta */
@@ -549,10 +556,29 @@ static void draw(struct notcurses *nc, struct ncplane *n, pf_engine *e,
     ncplane_set_fg_rgb8(n, 120, 120, 130);
     ncplane_printf_yx(n, (int)dy - 1, 1,
         "TAB pane  up/dn select  l/r adjust  / search  ENTER load  SPACE play  "
-        "[ ] seek  Q quit");
+        "[ ] seek  Esc up/quit  Q quit");
     if (status && status[0]) {
         ncplane_set_fg_rgb8(n, 120, 230, 140);
         ncplane_printf_yx(n, (int)dy - 2, 1, "%.*s", (int)dx - 2, status);
+    }
+
+    /* quit-confirmation modal, centered over everything */
+    if (g_confirm) {
+        int bw = 42, bh = 5;
+        int by = (int)dy / 2 - bh / 2, bx = (int)dx / 2 - bw / 2;
+        if (by < 0) by = 0;
+        if (bx < 0) bx = 0;
+        ncplane_set_bg_rgb8(n, 130, 40, 45);
+        ncplane_set_fg_rgb8(n, 255, 255, 255);
+        for (int r = 0; r < bh; r++)
+            for (int c = 0; c < bw; c++)
+                ncplane_putstr_yx(n, by + r, bx + c, " ");
+        ncplane_set_styles(n, NCSTYLE_BOLD);
+        ncplane_printf_yx(n, by + 1, bx + 3, "Quit pfsynth?");
+        ncplane_set_styles(n, NCSTYLE_NONE);
+        ncplane_set_fg_rgb8(n, 235, 220, 220);
+        ncplane_printf_yx(n, by + 3, bx + 3, "y / Enter = quit     n / Esc = cancel");
+        ncplane_set_bg_default(n);
     }
 
     notcurses_render(nc);
@@ -599,6 +625,16 @@ int main(int argc, char **argv)
             if (k == (uint32_t)-1) { quit = 1; break; }
             int is_release = (ni.evtype == NCTYPE_RELEASE);
 
+            /* quit-confirmation modal owns the keyboard while it's up */
+            if (g_confirm) {
+                if (is_release) continue;
+                if (k == 'y' || k == 'Y' || k == NCKEY_ENTER || k == '\r' || k == '\n')
+                    quit = 1;
+                else if (k == 'n' || k == 'N' || k == NCKEY_ESC)
+                    g_confirm = 0;
+                continue;                   /* any other key: stay in the modal */
+            }
+
             /* search mode owns the keyboard: letters edit the query, not notes */
             if (g_search) {
                 if (is_release) continue;
@@ -630,7 +666,14 @@ int main(int argc, char **argv)
             if (is_release) continue;
 
             switch (k) {
-            case 'Q': case NCKEY_ESC: quit = 1; break;
+            case 'Q':                       /* shift+Q: confirm-quit from anywhere */
+                g_confirm = 1; break;
+            case NCKEY_ESC:
+                /* in the browser, Esc backs up a directory; at the top level (or
+                 * when the params pane is focused) it asks to quit */
+                if (focus_lib && !at_top()) go_parent();
+                else                        g_confirm = 1;
+                break;
             case NCKEY_TAB: focus_lib = !focus_lib; break;
             case ' ': {
                 double pos, dur; int pl;
