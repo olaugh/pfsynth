@@ -38,6 +38,7 @@ typedef struct {
     double color;       /* mode-gain irregularity 0..1 (0 = smooth, 1 = bumpy) */
     double dry;         /* straight-through string level */
     double mix;         /* modal (body) level; 0 = bypass, audition the bare string */
+    double stereo_width;/* 0 = mono body, 1 = fully decorrelated L/R (stereo only) */
     unsigned seed;      /* deterministic jitter seed (so the body is reproducible) */
 } pf_board_params;
 
@@ -56,5 +57,31 @@ void   pf_board_init(pf_board *b, const pf_board_params *p, double sample_rate);
 void   pf_board_reset(pf_board *b);                 /* clear resonator state */
 double pf_board_tick(pf_board *b, double x);        /* one sample */
 void   pf_board_process(pf_board *b, float *buf, int n);  /* in place over a block */
+
+/* Stereo body: one modal bank, then a different Schroeder allpass chain per
+ * channel. A (delay-based) allpass has flat magnitude, so both channels keep the
+ * bank's exact spectrum and energy -> the image stays perfectly balanced for any
+ * signal; only the phase differs, which spreads the resonance L/R. The delay is
+ * what lets it decorrelate the low-mid body (a plain one-pole allpass only
+ * disperses the highs). The dry string path stays centered so the note image
+ * holds. Turns the mono "behind glass" body into something that sits in the room. */
+#define PF_BOARD_DECORR     4     /* Schroeder allpass sections per channel */
+#define PF_BOARD_DECORR_MAXD 512  /* max delay per section (samples) */
+
+typedef struct {
+    pf_board bank;       /* single shared modal bank (dry disabled) */
+    double   dry;        /* shared, centered direct path */
+    int      nap;        /* active allpass sections per side */
+    double   g;          /* allpass feedback gain */
+    int      dl[PF_BOARD_DECORR], dr[PF_BOARD_DECORR];   /* per-section delays */
+    int      pl[PF_BOARD_DECORR], pr[PF_BOARD_DECORR];   /* ring write cursors */
+    float    bl[PF_BOARD_DECORR][PF_BOARD_DECORR_MAXD];
+    float    br[PF_BOARD_DECORR][PF_BOARD_DECORR_MAXD];
+} pf_board_stereo;
+
+void pf_board_stereo_init(pf_board_stereo *b, const pf_board_params *p, double sample_rate);
+void pf_board_stereo_reset(pf_board_stereo *b);
+void pf_board_stereo_set_mix(pf_board_stereo *b, double mix);   /* body amount, both sides */
+void pf_board_stereo_tick(pf_board_stereo *b, double x, double *outl, double *outr);
 
 #endif

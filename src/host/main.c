@@ -40,25 +40,25 @@ static double midi_to_hz(int note)
     return 440.0 * pow(2.0, (note - 69) / 12.0);
 }
 
-/* print stats, NaN-check, peak-normalize, and write one WAV. 0 = ok. */
-static int finish(const char *path, float *buf, int n, const char *tag)
+/* print stats, NaN-check, peak-normalize (L/R together), and write a stereo WAV.
+ * `il` is 2*n interleaved samples. Returns 0 on success. */
+static int finish_stereo(const char *path, float *il, int n, const char *tag)
 {
     double peak = 0.0, sumsq = 0.0;
-    for (int i = 0; i < n; i++) {
-        float v = buf[i];
+    for (int i = 0; i < 2 * n; i++) {
+        float v = il[i];
         if (v != v) { fprintf(stderr, "ERROR: NaN in %s output\n", tag); return 2; }
         double a = fabs(v);
         if (a > peak) peak = a;
         sumsq += (double)v * v;
     }
-    double rms = sqrt(sumsq / n);
-    printf("  [%s] pre-norm peak=%.4g  rms=%.4g\n", tag, peak, rms);
+    printf("  [%s] pre-norm peak=%.4g  rms=%.4g\n", tag, peak, sqrt(sumsq / (2 * n)));
 
     if (peak > 0.0) {
-        float g = (float)(0.89 / peak);   /* ~ -1 dBFS headroom */
-        for (int i = 0; i < n; i++) buf[i] *= g;
+        float g = (float)(0.89 / peak);   /* scale both channels equally (keep balance) */
+        for (int i = 0; i < 2 * n; i++) il[i] *= g;
     }
-    if (wav_write_mono16(path, buf, n, SR)) {
+    if (wav_write_stereo16(path, il, n, SR)) {
         fprintf(stderr, "ERROR: failed to write %s\n", path);
         return 3;
     }
@@ -94,33 +94,37 @@ static void render_song(const pf_string_params *params, float *buf, int verbose)
 
 int main(void)
 {
-    float *buf  = (float *)calloc(TOTAL_SAMPLES, sizeof(float));
-    float *buf1 = (float *)calloc(TOTAL_SAMPLES, sizeof(float));
-    if (!buf || !buf1) { fprintf(stderr, "oom\n"); return 1; }
-
-    pf_board_params bp;
-    pf_board_defaults(&bp, SR);
-    static pf_board board;
+    float *buf  = (float *)calloc(TOTAL_SAMPLES, sizeof(float));       /* mono mix */
+    float *sst  = (float *)calloc((size_t)2 * TOTAL_SAMPLES, sizeof(float)); /* stereo body */
+    float *smo  = (float *)calloc((size_t)2 * TOTAL_SAMPLES, sizeof(float)); /* mono body */
+    if (!buf || !sst || !smo) { fprintf(stderr, "oom\n"); return 1; }
 
     printf("pfsynth render: %d events, %.1f s @ %d Hz\n",
            N_EVENTS, TOTAL_SECONDS, SR);
 
-    /* Full current model: coupled strings + strike-point comb. Render once,
-     * keep a no-soundboard copy, then run the body over the main buffer so the
-     * A/B (out_nobody.wav vs out.wav) shows the body's contribution to richness. */
+    /* Full current model: coupled strings + strike-point comb -> mono mix. */
     pf_string_params params; pf_string_defaults(&params, SR);
     render_song(&params, buf, 1);
-    memcpy(buf1, buf, (size_t)TOTAL_SAMPLES * sizeof(float));
 
+    pf_board_params bp;
+    pf_board_defaults(&bp, SR);
     printf("soundboard: %d modes  %.0f-%.0f Hz  mix=%.2f\n", bp.modes, bp.f_lo, bp.f_hi, bp.mix);
-    pf_board_init(&board, &bp, SR);
-    pf_board_process(&board, buf, TOTAL_SAMPLES);
+
+    /* A/B for this milestone: the same body as a mono bank (L=R) vs the stereo
+     * pair (decorrelated L/R banks, centered dry). */
+    static pf_board       mono;   pf_board_init(&mono, &bp, SR);
+    static pf_board_stereo st;    pf_board_stereo_init(&st, &bp, SR);
+    for (int i = 0; i < TOTAL_SAMPLES; i++) {
+        double m = pf_board_tick(&mono, buf[i]);
+        smo[2 * i] = smo[2 * i + 1] = (float)m;
+        double l, r; pf_board_stereo_tick(&st, buf[i], &l, &r);
+        sst[2 * i] = (float)l; sst[2 * i + 1] = (float)r;
+    }
 
     int rc = 0;
-    rc |= finish("out_nobody.wav", buf1, TOTAL_SAMPLES, "bare ");
-    rc |= finish(OUT_PATH,         buf,  TOTAL_SAMPLES, "full ");
+    rc |= finish_stereo("out_mono.wav", smo, TOTAL_SAMPLES, "mono  ");
+    rc |= finish_stereo(OUT_PATH,       sst, TOTAL_SAMPLES, "stereo");
 
-    free(buf);
-    free(buf1);
+    free(buf); free(sst); free(smo);
     return rc;
 }

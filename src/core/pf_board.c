@@ -42,6 +42,7 @@ void pf_board_defaults(pf_board_params *p, double sample_rate)
     p->color = 0.6;      /* gain irregularity so it reads as wood, not a formant */
     p->dry   = 1.0;      /* keep the full string tone present */
     p->mix   = 0.9;      /* body layer level: fuller, closer (audition knob in host) */
+    p->stereo_width = 0.20; /* musical width (corr ~0.5): wide body, image still holds */
     p->seed  = 0x51A4E3u;
 }
 
@@ -111,4 +112,77 @@ void pf_board_process(pf_board *b, float *buf, int n)
 {
     for (int i = 0; i < n; i++)
         buf[i] = (float)pf_board_tick(b, buf[i]);
+}
+
+/* ---------------- stereo body ---------------- */
+
+void pf_board_stereo_init(pf_board_stereo *b, const pf_board_params *p, double sample_rate)
+{
+    pf_board_params pm = *p;
+    pm.dry = 0.0;                          /* the wrapper owns the centered dry path */
+    pf_board_init(&b->bank, &pm, sample_rate);
+    b->dry = p->dry;
+
+    /* Two Schroeder-allpass chains with different delays. Both are allpass (flat
+     * magnitude -> L and R stay perfectly balanced); the different delays give a
+     * different phase per channel, decorrelating the body down into the low-mids.
+     * stereo_width scales the delay lengths; 0 collapses to ~mono. */
+    double w = p->stereo_width;
+    if (w < 0.0) w = 0.0;
+    if (w > 1.0) w = 1.0;
+
+    /* coprime base delays, distinct L vs R, so the two phase responses diverge */
+    static const int base_l[PF_BOARD_DECORR] = { 53, 127, 211, 17 };
+    static const int base_r[PF_BOARD_DECORR] = { 97,  31, 163, 241 };
+    b->nap = PF_BOARD_DECORR;
+    b->g   = 0.6;
+    for (int i = 0; i < b->nap; i++) {
+        int dl = (int)(base_l[i] * w + 0.5); if (dl < 1) dl = 1;
+        int dr = (int)(base_r[i] * w + 0.5); if (dr < 1) dr = 1;
+        if (dl >= PF_BOARD_DECORR_MAXD) dl = PF_BOARD_DECORR_MAXD - 1;
+        if (dr >= PF_BOARD_DECORR_MAXD) dr = PF_BOARD_DECORR_MAXD - 1;
+        b->dl[i] = dl; b->dr[i] = dr;
+        b->pl[i] = b->pr[i] = 0;
+    }
+    memset(b->bl, 0, sizeof b->bl);
+    memset(b->br, 0, sizeof b->br);
+}
+
+void pf_board_stereo_reset(pf_board_stereo *b)
+{
+    pf_board_reset(&b->bank);
+    for (int i = 0; i < b->nap; i++) b->pl[i] = b->pr[i] = 0;
+    memset(b->bl, 0, sizeof b->bl);
+    memset(b->br, 0, sizeof b->br);
+}
+
+void pf_board_stereo_set_mix(pf_board_stereo *b, double mix)
+{
+    b->bank.mix = mix;
+}
+
+/* one Schroeder allpass: w[n]=x-g*w[n-D]; y[n]=g*w[n]+w[n-D]. Flat magnitude,
+ * delay-dispersed phase (decorrelates down to low frequencies). */
+static double schroeder(double x, double g, int D, float *buf, int *pos)
+{
+    int rp = *pos - D;
+    if (rp < 0) rp += PF_BOARD_DECORR_MAXD;
+    double wD = buf[rp];
+    double wn = x - g * wD;
+    buf[*pos] = (float)wn;
+    if (++(*pos) >= PF_BOARD_DECORR_MAXD) *pos = 0;
+    return g * wn + wD;
+}
+
+void pf_board_stereo_tick(pf_board_stereo *b, double x, double *outl, double *outr)
+{
+    double dryx = b->dry * x;                       /* centered direct string tone */
+    double m    = pf_board_tick(&b->bank, x);       /* mono modal layer (mix applied) */
+    double l = m, r = m;
+    for (int i = 0; i < b->nap; i++) {
+        l = schroeder(l, b->g, b->dl[i], b->bl[i], &b->pl[i]);
+        r = schroeder(r, b->g, b->dr[i], b->br[i], &b->pr[i]);
+    }
+    *outl = dryx + l;
+    *outr = dryx + r;
 }

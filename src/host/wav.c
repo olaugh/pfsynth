@@ -49,3 +49,40 @@ int wav_write_mono16(const char *path, const float *samples, int n,
     fclose(f);
     return 0;
 }
+
+int wav_write_stereo16(const char *path, const float *interleaved, int n,
+                       int sample_rate)
+{
+    FILE *f = fopen(path, "wb");
+    if (!f) return 1;
+
+    uint32_t data_bytes = (uint32_t)n * 4;       /* 16-bit, 2 channels */
+    uint32_t byte_rate  = (uint32_t)sample_rate * 4;
+
+    fwrite("RIFF", 1, 4, f);
+    put_u32(f, 36 + data_bytes);
+    fwrite("WAVE", 1, 4, f);
+
+    fwrite("fmt ", 1, 4, f);
+    put_u32(f, 16);                 /* PCM fmt chunk size */
+    put_u16(f, 1);                  /* PCM */
+    put_u16(f, 2);                  /* channels */
+    put_u32(f, (uint32_t)sample_rate);
+    put_u32(f, byte_rate);
+    put_u16(f, 4);                  /* block align */
+    put_u16(f, 16);                 /* bits per sample */
+
+    fwrite("data", 1, 4, f);
+    put_u32(f, data_bytes);
+
+    for (int i = 0; i < 2 * n; i++) {
+        float v = interleaved[i];
+        if (v > 1.0f) v = 1.0f;
+        if (v < -1.0f) v = -1.0f;
+        int s = (int)(v * 32767.0f);
+        put_u16(f, (uint16_t)(int16_t)s);
+    }
+
+    fclose(f);
+    return 0;
+}

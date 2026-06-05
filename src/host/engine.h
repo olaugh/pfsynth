@@ -39,7 +39,7 @@ typedef struct {
     int     pedal;                /* sustain pedal down */
     unsigned long clock;
     double  master_gain;
-    pf_board board;               /* one shared modal soundboard over the mix */
+    pf_board_stereo board;        /* one shared stereo modal soundboard over the mix */
 
     /* sequencer */
     pf_song song;

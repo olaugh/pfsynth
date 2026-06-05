@@ -75,7 +75,7 @@ get a faster prompt, like a real piano).
 ### Soundboard (`pf_board`) — the body resonance
 A bare string is a thin, synthetic-sounding source; in a real piano you mostly hear the
 **soundboard** the strings drive. `pf_board` (core) models that body as a parallel bank of
-~32 second-order modal resonators (a coded modal impulse response — log-spaced mode
+~40 second-order modal resonators (a coded modal impulse response — log-spaced mode
 frequencies with deterministic jitter, low modes ringing longer than high) added on top of
 a dry path, i.e. a parallel resonant EQ that *colors* the string tone with the body.
 
@@ -88,9 +88,17 @@ body is generated from a few `pf_board_params` constants — no sampled IR (whic
 incompressible) — so it stays tiny. The host exposes a live **Body** mix knob; `mix = 0`
 bypasses it to A/B against the bare string.
 
+**Stereo body** (`pf_board_stereo`): the bank feeds a different Schroeder-allpass chain per
+channel. Each chain is allpass (flat magnitude), so L and R keep the body's exact spectrum
+and energy — the image stays perfectly balanced for any signal — while the different delays
+give a different phase per side, decorrelating the body down into the low-mids (a plain
+one-pole allpass only spreads the highs). The dry path stays centered, so bass is solid and
+centered while the mid/treble body opens up — `stereo_width` (~0.2) sets the amount. This is
+what the host actually runs over the mix; the offline harness writes a stereo `out.wav`.
+
 ### Deferred to later milestones
-Sympathetic resonance, per-register decay/velocity-brightness tuning, stereo, the rest of
-the instrument family, the serialized song format.
+Sympathetic resonance, per-register decay/velocity-brightness tuning, the rest of the
+instrument family, the serialized song format.
 
 ## Host tooling
 
@@ -159,8 +167,8 @@ make clean
 No external dependencies. The render harness in `src/host/main.c` is driven by a hardcoded
 `{note, velocity, time_sec}` event list (foreshadowing the serialized song format) and
 peak-normalizes the final buffer so output is always audible regardless of absolute model
-scale. It writes two files for an A/B: `out_nobody.wav` (strings only) and `out.wav` (the
-full model — coupled strings + strike comb + soundboard).
+scale. It writes two stereo files for an A/B: `out_mono.wav` (mono body, L=R) and `out.wav`
+(the stereo body) — both the full model (coupled strings + strike comb + soundboard).
 
 ## Conventions
 

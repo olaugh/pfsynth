@@ -53,7 +53,7 @@ void pf_string_defaults(pf_string_params *p, double sample_rate)
     p->strike_pos          = 0.12;     /* hammer ~1/8 along the string (0 = off) */
 
     p->hammer_mass         = 4.0e-3;   /* ~4 g */
-    p->hammer_stiffness    = 6.0e6;
+    p->hammer_stiffness    = 4.5e7;    /* harder felt -> brighter, more present attack */
     p->hammer_exponent     = 2.3;
     p->hammer_vmax         = 5.0;
     /* force -> displacement injection per sample = dt/(2Z), Z ~ 2 */

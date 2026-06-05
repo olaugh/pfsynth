@@ -7,4 +7,8 @@
 int wav_write_mono16(const char *path, const float *samples, int n,
                      int sample_rate);
 
+/* Write `n` interleaved L,R float frames (2*n samples) as a stereo 16-bit WAV. */
+int wav_write_stereo16(const char *path, const float *interleaved, int n,
+                       int sample_rate);
+
 #endif
