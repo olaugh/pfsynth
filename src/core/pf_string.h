@@ -13,6 +13,8 @@
 #define PF_MAX_DELAY 2048
 /* Most dispersion allpass sections we'll ever cascade. */
 #define PF_MAX_DISPERSION 16
+/* Coupled strings per note (the 2-3 unison strings + polarizations). */
+#define PF_MAX_STRINGS 3
 
 /* Patch parameters. A "song" eventually carries a handful of these floats. */
 typedef struct {
@@ -26,6 +28,11 @@ typedef struct {
     double damping;              /* extra high-frequency loss, [0,1). Brightness. */
     int    dispersion_sections;  /* M first-order allpasses (0..PF_MAX_DISPERSION) */
 
+    /* Coupled strings (beating + two-stage decay) */
+    int    unison_strings;       /* 1..PF_MAX_STRINGS loops coupled at the bridge */
+    double unison_detune;        /* total pitch spread across them, in cents */
+    double coupling;             /* bridge-load coupling; sets the prompt-decay rate */
+
     /* Nonlinear felt hammer */
     double hammer_mass;          /* kg-ish */
     double hammer_stiffness;     /* K in F = K*delta^p */
@@ -36,31 +43,37 @@ typedef struct {
     double output_gain;          /* final scaling (host may re-normalize anyway) */
 } pf_string_params;
 
+/* One waveguide loop: delay line + fractional tuner + loss + dispersion.
+ * A note is PF_MAX_STRINGS of these, slightly detuned and coupled at the bridge. */
+typedef struct {
+    float  dl[PF_MAX_DELAY];     /* the loop */
+    int    dl_len;               /* integer part of the loop delay */
+    int    dl_pos;               /* circular write cursor */
+
+    double tune_c, tune_x1, tune_y1;            /* fractional-delay tuner allpass */
+
+    double loss_b0, loss_b0_rel, loss_a1, loss_y1;  /* one-pole loss / loop gain */
+
+    int    disp_n;                              /* dispersion allpass count */
+    double disp_a;                              /* dispersion coefficient */
+    double disp_x1[PF_MAX_DISPERSION];
+    double disp_y1[PF_MAX_DISPERSION];
+
+    double ham_gain;             /* how strongly the hammer drives this loop */
+} pf_substring;
+
 typedef struct pf_string {
     int    active;
     double sr;
     double f0;
-
-    /* Waveguide delay line (the loop). */
-    float  dl[PF_MAX_DELAY];
-    int    dl_len;               /* integer part of the loop delay */
-    int    dl_pos;               /* circular write cursor */
-
-    /* First-order allpass fractional-delay tuner: y = c*(x - y1) + x1 */
-    double tune_c, tune_x1, tune_y1;
-
-    /* One-pole loss filter: y = b0*x + a1*y1  (DC gain = loop gain g).
-     * loss_b0 is the ringing gain; loss_b0_rel is the damped (note-off) gain. */
-    double loss_b0, loss_b0_rel, loss_a1, loss_y1;
     int    released;             /* damper has fallen (note-off) */
 
-    /* Dispersion: M cascaded first-order allpasses, shared coefficient. */
-    int    disp_n;
-    double disp_a;
-    double disp_x1[PF_MAX_DISPERSION];
-    double disp_y1[PF_MAX_DISPERSION];
+    /* Coupled string bank. */
+    int          n_strings;
+    pf_substring str[PF_MAX_STRINGS];
+    double       couple;         /* bridge-load coupling coefficient (mu) */
 
-    /* Nonlinear felt hammer. */
+    /* Nonlinear felt hammer (shared across the coupled strings). */
     int    ham_engaged;          /* hammer is in flight / touching */
     int    ham_contacted;        /* has been in compression at least once */
     double ham_pos, ham_vel;     /* hammer displacement / velocity */
@@ -73,7 +86,8 @@ typedef struct pf_string {
     /* DC blocker on the output (the nonlinear injection has a DC component). */
     double dc_x1, dc_y1;
 
-    /* Diagnostics for the dev harness (not used by the model). */
+    /* Diagnostics for the dev harness (mirror string 0; not used by the model). */
+    int    dl_len, disp_n;
     long   dbg_contact_samples;
 } pf_string;
 

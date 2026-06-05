@@ -32,8 +32,9 @@ runs once at precalc and costs zero bytes.
 
 ## Synthesis approach
 
-Digital-waveguide piano as the flagship voice. The current voice (`pf_string`) is a single
-dispersive, lossy waveguide loop excited by a nonlinear felt hammer:
+Digital-waveguide piano as the flagship voice. The current voice (`pf_string`) is a small
+bank of coupled dispersive, lossy waveguide loops (the 2–3 unison strings of a piano note)
+sharing one nonlinear felt hammer. Each loop is:
 
 - **Delay line** — the waveguide loop, tuned to the note pitch (integer delay + a
   first-order allpass fractional tuner).
@@ -53,6 +54,18 @@ The voice also has a **damper**: `pf_string_release()` switches the loop to a fa
 `release_t60` decay, modeling the felt damper falling on note-off. A held sustain pedal
 just means the host doesn't call it.
 
+### Coupled strings — beating + two-stage decay
+A single loop decays as a pure exponential, which sounds electronic. A real note has 2–3
+unison strings, slightly detuned, coupled at the bridge. `pf_string` models that:
+`unison_strings` loops (`unison_detune` cents apart) feed a shared bridge each sample. The
+bridge applies a load `in_k = b_k − μ·Σb_j` (`μ` = `coupling`): the **common mode** (all
+strings in phase, large `Σ`) loses energy fast → the bright "prompt" attack; the
+**differential mode** (out of phase, `Σ≈0`) is nearly lossless → the slow singing
+"aftersound." The cent-scale detune makes the loops beat and bleeds prompt energy into the
+aftersound. `unison_strings = 1` recovers the old single-loop voice (and disables coupling).
+Tuned to `μ ≈ 0.006` — the loss is per-bridge-pass, so it scales with pitch (treble notes
+get a faster prompt, like a real piano).
+
 ### Soundboard (`pf_board`) — the body resonance
 A bare string is a thin, synthetic-sounding source; in a real piano you mostly hear the
 **soundboard** the strings drive. `pf_board` (core) models that body as a parallel bank of
@@ -70,8 +83,8 @@ incompressible) — so it stays tiny. The host exposes a live **Body** mix knob;
 bypasses it to A/B against the bare string.
 
 ### Deferred to later milestones
-Multi-string coupling (beating / double decay), sympathetic resonance, hammer strike-point
-comb, the rest of the instrument family, the serialized song format.
+Sympathetic resonance, hammer strike-point comb, per-register decay/velocity-brightness
+tuning, stereo, the rest of the instrument family, the serialized song format.
 
 ## Host tooling
 
@@ -140,8 +153,8 @@ make clean
 No external dependencies. The render harness in `src/host/main.c` is driven by a hardcoded
 `{note, velocity, time_sec}` event list (foreshadowing the serialized song format) and
 peak-normalizes the final buffer so output is always audible regardless of absolute model
-scale. It writes two files for an A/B: `out_dry.wav` (bare string) and `out.wav` (same mix
-through the modal soundboard).
+scale. It writes two files for an A/B: `out_1string.wav` (one string per note) and
+`out.wav` (the default coupled pair), both through the soundboard.
 
 ## Conventions
 

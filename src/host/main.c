@@ -66,20 +66,12 @@ static int finish(const char *path, float *buf, int n, const char *tag)
     return 0;
 }
 
-int main(void)
+/* Render the whole SONG with the given patch into buf (one voice per event,
+ * summed). Prints per-note diagnostics when verbose. */
+static void render_song(const pf_string_params *params, float *buf, int verbose)
 {
-    float *buf = (float *)calloc(TOTAL_SAMPLES, sizeof(float));
-    if (!buf) { fprintf(stderr, "oom\n"); return 1; }
-
-    pf_string_params params;
-    pf_string_defaults(&params, SR);
-
-    /* One voice per event (no string coupling yet). Each voice is rendered for
-     * the remainder of the timeline and summed into the shared buffer. */
-    static pf_string voice;  /* 8 KB+, keep off the stack */
-
-    printf("pfsynth render: %d events, %.1f s @ %d Hz\n",
-           N_EVENTS, TOTAL_SECONDS, SR);
+    static pf_string voice;  /* 24 KB+, keep off the stack */
+    memset(buf, 0, (size_t)TOTAL_SAMPLES * sizeof(float));
 
     for (int e = 0; e < N_EVENTS; e++) {
         double f0 = midi_to_hz(SONG[e].note);
@@ -87,38 +79,52 @@ int main(void)
         if (start >= TOTAL_SAMPLES) continue;
         int len = TOTAL_SAMPLES - start;
 
-        pf_string_init(&voice, &params, f0);
+        pf_string_init(&voice, params, f0);
         pf_string_strike(&voice, SONG[e].vel);
         pf_string_process(&voice, buf + start, len);
 
-        printf("  note %3d  f0=%7.2f Hz  vel=%.2f  t=%.2fs  "
-               "delay=%d disp=%d contact=%ld samp (%.2f ms)\n",
-               SONG[e].note, f0, SONG[e].vel, SONG[e].t,
-               voice.dl_len, voice.disp_n, voice.dbg_contact_samples,
-               1000.0 * voice.dbg_contact_samples / SR);
+        if (verbose)
+            printf("  note %3d  f0=%7.2f Hz  vel=%.2f  t=%.2fs  "
+                   "delay=%d disp=%d contact=%ld samp (%.2f ms)\n",
+                   SONG[e].note, f0, SONG[e].vel, SONG[e].t,
+                   voice.dl_len, voice.disp_n, voice.dbg_contact_samples,
+                   1000.0 * voice.dbg_contact_samples / SR);
     }
+}
 
-    /* Keep a dry copy for an A/B, then run the shared modal soundboard over the
-     * whole mix. Filtering the summed mix == convolving each note's excitation
-     * with the one shared body (commuted synthesis), since the body is LTI. */
-    float *dry = (float *)malloc((size_t)TOTAL_SAMPLES * sizeof(float));
-    if (!dry) { fprintf(stderr, "oom\n"); free(buf); return 1; }
-    memcpy(dry, buf, (size_t)TOTAL_SAMPLES * sizeof(float));
+int main(void)
+{
+    float *buf  = (float *)calloc(TOTAL_SAMPLES, sizeof(float));
+    float *buf1 = (float *)calloc(TOTAL_SAMPLES, sizeof(float));
+    if (!buf || !buf1) { fprintf(stderr, "oom\n"); return 1; }
 
     pf_board_params bp;
     pf_board_defaults(&bp, SR);
     static pf_board board;
-    pf_board_init(&board, &bp, SR);
-    printf("soundboard: %d modes  %.0f-%.0f Hz  dry=%.2f mix=%.2f\n",
-           bp.modes, bp.f_lo, bp.f_hi, bp.dry, bp.mix);
-    pf_board_process(&board, buf, TOTAL_SAMPLES);
 
-    /* stats + peak normalize + write, for one buffer */
+    printf("pfsynth render: %d events, %.1f s @ %d Hz\n",
+           N_EVENTS, TOTAL_SECONDS, SR);
+
+    /* A/B for this milestone: single string vs the coupled pair, both through
+     * the soundboard, so the difference you hear is purely string coupling
+     * (beating + two-stage decay). */
+    pf_string_params p2; pf_string_defaults(&p2, SR);       /* coupled (default) */
+    pf_string_params p1 = p2; p1.unison_strings = 1;        /* single string */
+
+    printf("[2-string coupled, with body]\n");
+    render_song(&p2, buf, 1);
+    printf("soundboard: %d modes  %.0f-%.0f Hz  mix=%.2f\n", bp.modes, bp.f_lo, bp.f_hi, bp.mix);
+
+    render_song(&p1, buf1, 0);
+
+    pf_board_init(&board, &bp, SR);  pf_board_process(&board, buf,  TOTAL_SAMPLES);
+    pf_board_init(&board, &bp, SR);  pf_board_process(&board, buf1, TOTAL_SAMPLES);
+
     int rc = 0;
-    rc |= finish("out_dry.wav", dry, TOTAL_SAMPLES, "dry  ");
-    rc |= finish(OUT_PATH,      buf, TOTAL_SAMPLES, "body ");
+    rc |= finish("out_1string.wav", buf1, TOTAL_SAMPLES, "1str ");
+    rc |= finish(OUT_PATH,          buf,  TOTAL_SAMPLES, "2str ");
 
-    free(dry);
     free(buf);
+    free(buf1);
     return rc;
 }
