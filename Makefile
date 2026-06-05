@@ -8,11 +8,12 @@ CFLAGS  := $(CSTD) $(WARN) -Isrc -O2
 LDLIBS  := -lm
 
 # Offline render harness (dependency-free).
-SRC     := src/core/pf_string.c src/core/pf_board.c src/host/wav.c src/host/main.c
+SRC     := src/core/pf_string.c src/core/pf_board.c src/core/pf_reverb.c \
+           src/host/wav.c src/host/main.c
 
 # Interactive TUI: core + engine + midi + CoreAudio + notcurses.
-TUI_SRC := src/core/pf_string.c src/core/pf_board.c src/host/midi.c \
-           src/host/engine.c src/host/audio.c src/host/tui.c
+TUI_SRC := src/core/pf_string.c src/core/pf_board.c src/core/pf_reverb.c \
+           src/host/midi.c src/host/engine.c src/host/audio.c src/host/tui.c
 
 # notcurses lives in its homebrew keg (no pkg-config installed).
 NC_PREFIX := /opt/homebrew/opt/notcurses

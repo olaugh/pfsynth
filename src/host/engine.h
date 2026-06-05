@@ -14,6 +14,7 @@
 
 #include "../core/pf_string.h"
 #include "../core/pf_board.h"
+#include "../core/pf_reverb.h"
 #include "midi.h"
 #include <pthread.h>
 
@@ -40,6 +41,7 @@ typedef struct {
     unsigned long clock;
     double  master_gain;
     pf_board_stereo board;        /* one shared stereo modal soundboard over the mix */
+    pf_reverb       reverb;       /* room reverb over the final stereo mix */
 
     /* sequencer */
     pf_song song;
@@ -59,6 +61,7 @@ void pf_engine_destroy(pf_engine *e);
 void pf_engine_set_params(pf_engine *e, const pf_string_params *p);
 void pf_engine_set_master(pf_engine *e, double gain);
 void pf_engine_set_body(pf_engine *e, double mix);   /* soundboard amount, 0 = bypass */
+void pf_engine_set_reverb(pf_engine *e, double wet);  /* room amount, 0 = dry */
 
 /* Live triggers (UI keyboard). velocity 1..127 like MIDI. */
 void pf_engine_note_on(pf_engine *e, int note, int vel);

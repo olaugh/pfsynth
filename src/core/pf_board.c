@@ -36,12 +36,16 @@ void pf_board_defaults(pf_board_params *p, double sample_rate)
     p->modes = 40;       /* denser bank reads as a richer, more solid body */
     p->f_lo  = 85.0;     /* lowest body resonance */
     p->f_hi  = 6000.0;   /* top of the radiating range */
-    p->t_lo  = 0.18;     /* low modes ring enough to add body weight ... */
-    p->t_hi  = 0.05;     /* ... high modes are shorter, coloring the attack */
+    /* SHORT modes: the body is a fast resonant coloration that follows the
+     * string, not a ringing resonance. Long modes ring *up* over ~60 ms and
+     * smear the percussive attack into a swell; short ones keep the strike sharp.
+     * Sustain/space comes from the reverb, not the body. */
+    p->t_lo  = 0.010;
+    p->t_hi  = 0.004;
     p->tilt  = -1.2;     /* dB/oct: gently darker toward the top, like radiation */
     p->color = 0.6;      /* gain irregularity so it reads as wood, not a formant */
     p->dry   = 1.0;      /* keep the full string tone present */
-    p->mix   = 0.9;      /* body layer level: fuller, closer (audition knob in host) */
+    p->mix   = 0.8;      /* body coloration level (audition knob in the host) */
     p->stereo_width = 0.20; /* musical width (corr ~0.5): wide body, image still holds */
     p->seed  = 0x51A4E3u;
 }

@@ -85,8 +85,11 @@ get a faster prompt, like a real piano).
 A bare string is a thin, synthetic-sounding source; in a real piano you mostly hear the
 **soundboard** the strings drive. `pf_board` (core) models that body as a parallel bank of
 ~40 second-order modal resonators (a coded modal impulse response — log-spaced mode
-frequencies with deterministic jitter, low modes ringing longer than high) added on top of
-a dry path, i.e. a parallel resonant EQ that *colors* the string tone with the body.
+frequencies with deterministic jitter) added on top of a dry path, i.e. a parallel resonant
+EQ that *colors* the string tone with the body. The modes are deliberately **short** (~10
+ms): long modes ring *up* over ~60 ms and smear the percussive strike into a slow swell
+(sounds wrong / "plucky"); short modes track the string so the attack stays sharp. The
+sustained body / room comes from the reverb (below), not from the soundboard ringing.
 
 This is **commuted synthesis** done the cheap way: after the hammer the instrument is ~LTI
 and there is exactly one shared soundboard, so filtering the summed mix of all voices
@@ -104,6 +107,14 @@ give a different phase per side, decorrelating the body down into the low-mids (
 one-pole allpass only spreads the highs). The dry path stays centered, so bass is solid and
 centered while the mid/treble body opens up — `stereo_width` (~0.2) sets the amount. This is
 what the host actually runs over the mix; the offline harness writes a stereo `out.wav`.
+
+### Room reverb (`pf_reverb`)
+A real piano recording has a room around it; the soundboard alone is bone dry. `pf_reverb`
+(core) is a compact Freeverb-style stereo reverb — 8 parallel damped feedback combs into 4
+series allpasses per channel, the right side offset a few samples for stereo. It runs once
+over the final mix (after the body), giving the sustained space/ambience the short-mode body
+no longer provides. From constants (delay tables), so it ships tiny; the delay buffers are
+runtime RAM. Live **Reverb** wet knob in the host (~0.3 default).
 
 ### Calibration against a real piano (`src/host/analyze.c`)
 Rather than tune everything by ear, the model is fit to a real grand (the free **Salamander
@@ -196,8 +207,8 @@ No external dependencies. The render harness in `src/host/main.c` is driven by a
 `{note, velocity, time_sec}` event list (foreshadowing the serialized song format) and
 peak-normalizes the final buffer so output is always audible regardless of absolute model
 scale. The hardcoded SONG is currently an octave arpeggio; it writes two stereo files for an
-A/B: `out_flat.wav` (per-register treble makeup off — treble buried) and `out.wav` (makeup
-on — balanced to the Salamander).
+A/B: `out_dry.wav` (no reverb) and `out.wav` (+ room reverb); both have the sharp,
+non-swelling body.
 
 ## Conventions
 

@@ -7,6 +7,7 @@
  */
 #include "../core/pf_string.h"
 #include "../core/pf_board.h"
+#include "../core/pf_reverb.h"
 #include "wav.h"
 
 #include <stdio.h>
@@ -106,28 +107,28 @@ int main(void)
     pf_board_params bp;
     pf_board_defaults(&bp, SR);
 
-    /* A/B for this milestone: without vs with the per-register loudness makeup.
-     * Off, the treble is ~20 dB too quiet (nearly inaudible in the arpeggio);
-     * on, it's lifted to the measured Salamander balance. */
-    pf_string_params pon;  pf_string_defaults(&pon, SR);                       /* makeup on */
-    pf_string_params poff = pon; poff.output_pitch = 0.0;                      /* no makeup */
-    printf("treble makeup: on=(f0/110)^%.2f  off=flat\n", pon.output_pitch);
+    /* Full current model -> stereo body (sharp, fast coloration now). The A/B is
+     * dry vs the new room reverb. */
+    pf_string_params p; pf_string_defaults(&p, SR);
+    render_song(&p, buf, 1);
+    static pf_board_stereo st; pf_board_stereo_init(&st, &bp, SR);
+    for (int i = 0; i < TOTAL_SAMPLES; i++) {
+        double l, r; pf_board_stereo_tick(&st, buf[i], &l, &r);
+        smo[2 * i] = (float)l;     smo[2 * i + 1] = (float)r;   /* dry (no reverb) */
+        sst[2 * i] = (float)l;     sst[2 * i + 1] = (float)r;   /* will get reverb */
+    }
 
-    render_song(&poff, buf, 0);
-    { static pf_board_stereo st; pf_board_stereo_init(&st, &bp, SR);
-      for (int i = 0; i < TOTAL_SAMPLES; i++) {
-          double l, r; pf_board_stereo_tick(&st, buf[i], &l, &r);
-          smo[2 * i] = (float)l; smo[2 * i + 1] = (float)r; } }
-
-    render_song(&pon, buf, 1);
-    { static pf_board_stereo st; pf_board_stereo_init(&st, &bp, SR);
-      for (int i = 0; i < TOTAL_SAMPLES; i++) {
-          double l, r; pf_board_stereo_tick(&st, buf[i], &l, &r);
-          sst[2 * i] = (float)l; sst[2 * i + 1] = (float)r; } }
+    static pf_reverb rev; pf_reverb_init(&rev, SR);
+    printf("reverb: room/damp fixed, wet=0.30\n");
+    for (int i = 0; i < TOTAL_SAMPLES; i++) {
+        double l, r;
+        pf_reverb_tick(&rev, sst[2 * i], sst[2 * i + 1], &l, &r);
+        sst[2 * i] = (float)l; sst[2 * i + 1] = (float)r;
+    }
 
     int rc = 0;
-    rc |= finish_stereo("out_flat.wav", smo, TOTAL_SAMPLES, "flat ");
-    rc |= finish_stereo(OUT_PATH,       sst, TOTAL_SAMPLES, "fit  ");
+    rc |= finish_stereo("out_dry.wav", smo, TOTAL_SAMPLES, "dry  ");
+    rc |= finish_stereo(OUT_PATH,      sst, TOTAL_SAMPLES, "verb ");
 
     free(buf); free(sst); free(smo);
     return rc;

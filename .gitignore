@@ -1,6 +1,6 @@
 build/
 out.wav
-out_flat.wav
+out_dry.wav
 calib/
 *.o
 maestro/

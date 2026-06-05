@@ -26,6 +26,7 @@ void pf_engine_init(pf_engine *e, double sr)
     pf_board_params bp;
     pf_board_defaults(&bp, sr);
     pf_board_stereo_init(&e->board, &bp, sr);
+    pf_reverb_init(&e->reverb, sr);
     pthread_mutex_init(&e->lock, NULL);
     rebuild_templates(e);
 }
@@ -57,6 +58,13 @@ void pf_engine_set_body(pf_engine *e, double mix)
 {
     pthread_mutex_lock(&e->lock);
     pf_board_stereo_set_mix(&e->board, mix);   /* runtime scalar; no rebuild needed */
+    pthread_mutex_unlock(&e->lock);
+}
+
+void pf_engine_set_reverb(pf_engine *e, double wet)
+{
+    pthread_mutex_lock(&e->lock);
+    pf_reverb_set(&e->reverb, 0.72, 0.35, wet);   /* fixed room/damp, variable wet (~0.3) */
     pthread_mutex_unlock(&e->lock);
 }
 
@@ -133,6 +141,7 @@ void pf_engine_panic(pf_engine *e)
     for (int i = 0; i < PF_POLY; i++) e->slots[i].used = 0;
     e->pedal = 0;
     pf_board_stereo_reset(&e->board);
+    pf_reverb_reset(&e->reverb);
     pthread_mutex_unlock(&e->lock);
 }
 
@@ -149,6 +158,7 @@ void pf_engine_load(pf_engine *e, pf_song *song)
     for (int i = 0; i < PF_POLY; i++) e->slots[i].used = 0;
     e->pedal = 0;
     pf_board_stereo_reset(&e->board);
+    pf_reverb_reset(&e->reverb);
     pthread_mutex_unlock(&e->lock);
 }
 
@@ -172,6 +182,7 @@ void pf_engine_seek(pf_engine *e, double seconds)
         for (int i = 0; i < PF_POLY; i++) e->slots[i].used = 0;
         e->pedal = 0;
         pf_board_stereo_reset(&e->board);
+        pf_reverb_reset(&e->reverb);
         /* re-place the event cursor */
         int c = 0;
         while (c < e->song.n && e->song.ev[c].t < seconds) c++;
@@ -222,9 +233,10 @@ static void render_chunk(pf_engine *e, float *out, int n)
 
     double g = e->master_gain;
     for (int j = 0; j < n; j++) {
-        /* shared stereo soundboard over the (mono) mix, then makeup + safety clip */
+        /* stereo soundboard over the (mono) mix, then room reverb, makeup, clip */
         double l, r;
         pf_board_stereo_tick(&e->board, out[2 * j], &l, &r);
+        pf_reverb_tick(&e->reverb, l, r, &l, &r);
         out[2 * j]     = (float)tanh(l * g);
         out[2 * j + 1] = (float)tanh(r * g);
     }
