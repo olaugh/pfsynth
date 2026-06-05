@@ -106,14 +106,12 @@ int main(void)
     pf_board_params bp;
     pf_board_defaults(&bp, SR);
 
-    /* A/B for this milestone: the inharmonicity and decay held FLAT across the
-     * keyboard (pitch slopes 0) vs scaled by pitch from the Salamander fit. Same
-     * A4 tone in both; the difference is how bass and treble behave. */
-    pf_string_params pon;  pf_string_defaults(&pon, SR);                       /* fitted */
-    pf_string_params poff = pon;                                              /* flat */
-    poff.inharm_pitch = 0.0; poff.decay_pitch = 0.0;
-    printf("pitch fit: B~f0^%.2f  T60~f0^%.2f  (flat = 0)\n",
-           pon.inharm_pitch, pon.decay_pitch);
+    /* A/B for this milestone: without vs with the per-register loudness makeup.
+     * Off, the treble is ~20 dB too quiet (nearly inaudible in the arpeggio);
+     * on, it's lifted to the measured Salamander balance. */
+    pf_string_params pon;  pf_string_defaults(&pon, SR);                       /* makeup on */
+    pf_string_params poff = pon; poff.output_pitch = 0.0;                      /* no makeup */
+    printf("treble makeup: on=(f0/110)^%.2f  off=flat\n", pon.output_pitch);
 
     render_song(&poff, buf, 0);
     { static pf_board_stereo st; pf_board_stereo_init(&st, &bp, SR);

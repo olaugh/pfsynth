@@ -50,6 +50,9 @@ typedef struct {
     double injection;            /* g_inj: force->displacement coupling per sample */
 
     double output_gain;          /* final scaling (host may re-normalize anyway) */
+    double output_pitch;         /* per-register loudness: out_gain *= (f0/110)^this above
+                                  * 110 Hz. Fit so treble isn't ~20 dB too quiet vs a real
+                                  * grand (the bare string + body under-radiate the treble). */
 } pf_string_params;
 
 /* One waveguide loop: delay line + fractional tuner + loss + dispersion.

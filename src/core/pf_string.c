@@ -67,6 +67,7 @@ void pf_string_defaults(pf_string_params *p, double sample_rate)
     p->injection           = 1.0 / (2.0 * 2.0) / sample_rate;
 
     p->output_gain         = 1.0;
+    p->output_pitch        = 0.8;      /* treble makeup, fit to the Salamander balance */
 }
 
 /* Build one waveguide loop (delay + fractional tuner + loss + dispersion) tuned
@@ -187,7 +188,12 @@ void pf_string_init(pf_string *s, const pf_string_params *p, double f0)
     s->ham_p     = p->hammer_exponent;
     s->ham_vhard = p->hammer_vel_hardness;
     s->g_inj     = p->injection;
-    s->out_gain  = p->output_gain;
+    /* per-register loudness makeup: lift the treble so it isn't buried (real
+     * grands radiate the treble far better than a bare waveguide + body do).
+     * Capped so the very top octave doesn't overshoot. */
+    double og = pow((f0 > 110.0 ? f0 : 110.0) / 110.0, p->output_pitch);
+    if (og > 10.0) og = 10.0;
+    s->out_gain  = p->output_gain * og;
 
     /* harness mirrors (string 0) */
     s->dl_len = s->str[0].dl_len;

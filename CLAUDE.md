@@ -116,6 +116,12 @@ Close the loop by rendering a model note and running it back through `analyze`; 
 `B`/`T60` are checked against the measured targets. (The single-coefficient dispersion only
 *approximates* a given `B`, so the requested value is calibrated to land the realized one.)
 
+**Register balance**: the samples also preserve real per-note loudness (they're not
+peak-normalized). Measuring it showed the bare waveguide+body under-radiate the treble by
+~20 dB vs a real grand — the top was nearly inaudible. `out_gain` now gets a per-register
+makeup `(f0/110)^output_pitch` (≈0.8, capped ×10), fit so the model's A4–A6 peak balance
+matches the Salamander (~0.7 of the bass).
+
 ### Deferred to later milestones
 Sympathetic resonance, accurate dispersion (realize a target `B` exactly), velocity-
 brightness vs the real samples, the rest of the instrument family, the serialized song format.
@@ -189,8 +195,8 @@ No external dependencies. The render harness in `src/host/main.c` is driven by a
 `{note, velocity, time_sec}` event list (foreshadowing the serialized song format) and
 peak-normalizes the final buffer so output is always audible regardless of absolute model
 scale. The hardcoded SONG is currently an octave arpeggio; it writes two stereo files for an
-A/B: `out_flat.wav` (inharmonicity/decay held flat across the keyboard) and `out.wav` (both
-pitch-scaled from the Salamander fit).
+A/B: `out_flat.wav` (per-register treble makeup off — treble buried) and `out.wav` (makeup
+on — balanced to the Salamander).
 
 ## Conventions
 
