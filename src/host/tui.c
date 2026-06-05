@@ -1,11 +1,11 @@
 /* tui.c - notcurses front end for pfsynth. HOST-ONLY, macOS.
  *
- * Three things in one screen:
- *   - a live parameter editor for the piano patch (audition while you tweak),
+ * Two things in one screen:
+ *   - a live parameter editor for the piano patch (audition while you tweak), and
  *   - a file browser over the maestro MIDI set (labelled with composer / title /
- *     duration from the dataset CSV) plus a `/` search by composer or title, and
- *   - a QWERTY "piano" so you can play notes by hand.
+ *     duration from the dataset CSV) plus a `/` search by composer or title.
  *
+ * A now-playing strip shows the 88 keys lighting up as the song sounds.
  * Audio runs on the CoreAudio thread (see audio.c); this file is the UI thread.
  */
 #include "engine.h"
@@ -25,7 +25,6 @@
 
 #define SR 44100.0
 #define DEFAULT_LIB "maestro/midi/maestro-v3.0.0"
-#define KEY_HOLD_MS 800.0   /* auto note-off when the terminal sends no key-up */
 
 /* ---------------- parameter editor model ---------------- */
 
@@ -383,60 +382,10 @@ static int browser_enter(pf_engine *e, char *status, size_t statuslen)
     return 0;
 }
 
-/* ---------------- QWERTY piano ---------------- */
-
-static int   g_base = 60;            /* base MIDI note (C4) */
-static signed char g_keymap[256];    /* char -> semitone offset, -1 = none */
-static double g_keydown_ms[256];     /* press time per char, 0 = up */
-static int    g_keynote[256];        /* note triggered by that char */
-
-static void keymap_init(void)
-{
-    memset(g_keymap, -1, sizeof g_keymap);
-    const char *low = "zsxdcvgbhnjm,l.";          /* lower row = base octave */
-    for (int i = 0; low[i]; i++) g_keymap[(unsigned char)low[i]] = (signed char)i;
-    const char *up = "q2w3er5t6y7ui";             /* upper row = base + octave */
-    for (int i = 0; up[i]; i++) g_keymap[(unsigned char)up[i]] = (signed char)(12 + i);
-}
-
-static double now_ms(void)
-{
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    return ts.tv_sec * 1000.0 + ts.tv_nsec / 1.0e6;
-}
-
-static void key_press(pf_engine *e, unsigned char c)
-{
-    int off = g_keymap[c];
-    if (off < 0) return;
-    if (g_keydown_ms[c] != 0.0) return;            /* already held */
-    int note = g_base + off;
-    if (note < 0 || note > 127) return;
-    g_keynote[c] = note;
-    g_keydown_ms[c] = now_ms();
-    pf_engine_note_on(e, note, 96);
-}
-
-static void key_release(pf_engine *e, unsigned char c)
-{
-    if (g_keydown_ms[c] == 0.0) return;
-    pf_engine_note_off(e, g_keynote[c]);
-    g_keydown_ms[c] = 0.0;
-}
-
-static void keys_timeout(pf_engine *e)
-{
-    double t = now_ms();
-    for (int c = 0; c < 256; c++)
-        if (g_keydown_ms[c] != 0.0 && t - g_keydown_ms[c] > KEY_HOLD_MS)
-            key_release(e, (unsigned char)c);
-}
-
 static void seek_rel(pf_engine *e, double d)
 {
     double pos, dur; int pl;
-    pf_engine_snapshot(e, NULL, &pos, &dur, &pl);
+    pf_engine_snapshot(e, NULL, &pos, &dur, &pl, NULL);
     pf_engine_seek(e, pos + d);
 }
 
@@ -449,15 +398,15 @@ static void hline(struct ncplane *n, int y, unsigned dx)
 }
 
 static void draw(struct notcurses *nc, struct ncplane *n, pf_engine *e,
-                 int focus_lib, int pedal, const char *status)
+                 int focus_lib, const char *status)
 {
     unsigned dy, dx;
     ncplane_dim_yx(n, &dy, &dx);
     ncplane_erase(n);
 
     unsigned char active[128];
-    double pos = 0, dur = 0; int playing = 0;
-    int voices = pf_engine_snapshot(e, active, &pos, &dur, &playing);
+    double pos = 0, dur = 0; int playing = 0, pedal = 0;
+    int voices = pf_engine_snapshot(e, active, &pos, &dur, &playing, &pedal);
 
     /* header */
     ncplane_set_styles(n, NCSTYLE_BOLD);
@@ -568,13 +517,13 @@ static void draw(struct notcurses *nc, struct ncplane *n, pf_engine *e,
         }
     }
 
-    /* keyboard strip */
+    /* now-playing keyboard strip (88 keys, lit as notes sound) */
     int ky = (int)dy - 5;
     hline(n, ky - 1, dx);
     ncplane_set_styles(n, NCSTYLE_BOLD);
     ncplane_set_fg_rgb8(n, 200, 200, 210);
-    ncplane_printf_yx(n, ky, 1, "VOICES %3d   PEDAL %s   PLAY OCTAVE C%d  (z.. / q..)",
-                      voices, pedal ? "DOWN" : "up ", g_base / 12 - 1);
+    ncplane_printf_yx(n, ky, 1, "VOICES %3d   PEDAL %s",
+                      voices, pedal ? "DOWN" : "up ");
     ncplane_set_styles(n, NCSTYLE_NONE);
     int kw = (int)dx - 2;
     for (int k = 0; k < 88 && k < kw; k++) {
@@ -591,7 +540,7 @@ static void draw(struct notcurses *nc, struct ncplane *n, pf_engine *e,
     ncplane_set_fg_rgb8(n, 120, 120, 130);
     ncplane_printf_yx(n, (int)dy - 1, 1,
         "TAB pane  up/dn select  l/r adjust  / search  ENTER load  SPACE play  "
-        "[ ] seek  p pedal  +/- oct  Q quit");
+        "[ ] seek  Q quit");
     if (status && status[0]) {
         ncplane_set_fg_rgb8(n, 120, 230, 140);
         ncplane_printf_yx(n, (int)dy - 2, 1, "%.*s", (int)dx - 2, status);
@@ -613,7 +562,6 @@ int main(int argc, char **argv)
     pf_engine_init(&eng, SR);
     vals_from_defaults();
     apply_params(&eng);
-    keymap_init();
 
     if (pf_audio_start(&eng)) {
         fprintf(stderr, "could not start audio\n");
@@ -630,11 +578,11 @@ int main(int argc, char **argv)
 
     list_dir();
 
-    int focus_lib = 1, pedal = 0, quit = 0;
-    char status[256] = "pick a MIDI file and press ENTER, or play with the keyboard";
+    int focus_lib = 1, quit = 0;
+    char status[256] = "pick a MIDI file and press ENTER  ( / to search by composer or title )";
 
     while (!quit) {
-        draw(nc, std, &eng, focus_lib, pedal, status);
+        draw(nc, std, &eng, focus_lib, status);
 
         ncinput ni;
         uint32_t k;
@@ -670,12 +618,6 @@ int main(int argc, char **argv)
                 continue;
             }
 
-            /* music keys are always live, regardless of focused pane */
-            if (k < 256 && g_keymap[k] >= 0) {
-                if (is_release) key_release(&eng, (unsigned char)k);
-                else            key_press(&eng, (unsigned char)k);
-                continue;
-            }
             if (is_release) continue;
 
             switch (k) {
@@ -683,16 +625,10 @@ int main(int argc, char **argv)
             case NCKEY_TAB: focus_lib = !focus_lib; break;
             case ' ': {
                 double pos, dur; int pl;
-                pf_engine_snapshot(&eng, NULL, &pos, &dur, &pl);
+                pf_engine_snapshot(&eng, NULL, &pos, &dur, &pl, NULL);
                 if (pl) pf_engine_pause(&eng); else pf_engine_play(&eng);
                 break;
             }
-            case 'p': case 'P':
-                pedal = !pedal; pf_engine_pedal(&eng, pedal); break;
-            case '+': case '=':
-                if (g_base <= 108 - 12) g_base += 12; break;
-            case '-': case '_':
-                if (g_base >= 12) g_base -= 12; break;
             case NCKEY_UP:
                 if (focus_lib) { if (g_sel > 0) g_sel--; }
                 else if (g_param_sel > 0) g_param_sel--;
@@ -719,8 +655,6 @@ int main(int argc, char **argv)
             }
         }
 
-        keys_timeout(&eng);
-
         struct timespec ts = { 0, 16 * 1000 * 1000 };  /* ~60 fps */
         nanosleep(&ts, NULL);
     }
@@ -729,5 +663,7 @@ int main(int argc, char **argv)
     pf_audio_stop();
     pf_engine_destroy(&eng);
     free(g_entries);
+    free(g_meta);
+    free(g_results);
     return 0;
 }

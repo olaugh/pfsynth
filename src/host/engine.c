@@ -242,7 +242,7 @@ void pf_engine_render(pf_engine *e, float *out, int frames)
 }
 
 int pf_engine_snapshot(pf_engine *e, unsigned char active[128],
-                       double *pos, double *dur, int *playing)
+                       double *pos, double *dur, int *playing, int *pedal)
 {
     pthread_mutex_lock(&e->lock);
     if (active) memset(active, 0, 128);
@@ -259,6 +259,7 @@ int pf_engine_snapshot(pf_engine *e, unsigned char active[128],
     if (pos)     *pos = e->play_pos;
     if (dur)     *dur = e->has_song ? e->song.duration : 0.0;
     if (playing) *playing = e->playing;
+    if (pedal)   *pedal = e->pedal;
     pthread_mutex_unlock(&e->lock);
     return live;
 }

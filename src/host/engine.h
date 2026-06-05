@@ -73,8 +73,9 @@ void pf_engine_seek(pf_engine *e, double seconds);
 void pf_engine_render(pf_engine *e, float *out, int frames);
 
 /* Snapshot for the UI (all under one lock). active[128] gets 1 for sounding
- * notes; returns live voice count. pos and dur in seconds if non-NULL. */
+ * notes; returns live voice count. pos and dur in seconds, playing and pedal
+ * (sustain currently engaged, whether by the UI or a MIDI CC64) if non-NULL. */
 int  pf_engine_snapshot(pf_engine *e, unsigned char active[128],
-                        double *pos, double *dur, int *playing);
+                        double *pos, double *dur, int *playing, int *pedal);
 
 #endif
