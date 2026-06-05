@@ -25,8 +25,9 @@ BUILD   := build
 BIN     := $(BUILD)/pfsynth
 DBG     := $(BUILD)/pfsynth-debug
 TUI     := $(BUILD)/pfsynth-tui
+ANALYZE := $(BUILD)/pfsynth-analyze
 
-.PHONY: all run debug tui clean
+.PHONY: all run debug tui analyze clean
 
 all: $(BIN) $(TUI)
 
@@ -50,6 +51,13 @@ run: $(BIN)
 
 tui: $(TUI)
 	@echo "run with: ./$(TUI) [midi-library-dir]"
+
+# Offline analysis tool: measure real piano samples to fit the model.
+$(ANALYZE): src/host/analyze.c | $(BUILD)
+	$(CC) $(CFLAGS) src/host/analyze.c -o $@ $(LDLIBS)
+
+analyze: $(ANALYZE)
+	@echo "run with: ./$(ANALYZE) <file.wav> <midi-note>"
 
 $(BUILD):
 	mkdir -p $(BUILD)

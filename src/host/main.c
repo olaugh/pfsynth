@@ -21,17 +21,15 @@
 typedef struct { int note; double vel; double t; } event;
 
 static const event SONG[] = {
-    /* a velocity staircase on one mid note (A3, ~220 Hz): pp -> ff. With
-     * velocity->brightness the timbre, not just the loudness, opens up. */
-    { 57, 0.10, 0.0 },
-    { 57, 0.25, 1.3 },
-    { 57, 0.45, 2.6 },
-    { 57, 0.65, 3.9 },
-    { 57, 0.85, 5.2 },
-    { 57, 1.00, 6.5 },
-    /* a soft then loud chord to hear it in context (C4 / E4 / G4) */
-    { 60, 0.18, 8.0 }, { 64, 0.18, 8.0 }, { 67, 0.18, 8.0 },
-    { 60, 0.95, 9.4 }, { 64, 0.95, 9.4 }, { 67, 0.95, 9.4 },
+    /* an octave arpeggio A1..A6, left to ring: with the pitch-fitted model the
+     * bass sustains for many seconds while the treble dies fast and shimmers
+     * (rising inharmonicity), the way a real piano does. */
+    { 33, 0.75,  0.0 },   /* A1 ~55 Hz   */
+    { 45, 0.75,  1.6 },   /* A2 ~110 Hz  */
+    { 57, 0.75,  3.2 },   /* A3 ~220 Hz  */
+    { 69, 0.75,  4.8 },   /* A4 440 Hz   */
+    { 81, 0.75,  6.4 },   /* A5 ~880 Hz  */
+    { 93, 0.75,  8.0 },   /* A6 ~1760 Hz */
 };
 #define N_EVENTS ((int)(sizeof(SONG) / sizeof(SONG[0])))
 
@@ -108,13 +106,14 @@ int main(void)
     pf_board_params bp;
     pf_board_defaults(&bp, SR);
 
-    /* A/B for this milestone: a velocity staircase rendered with flat dynamics
-     * (velocity changes loudness only) vs velocity->brightness (it also opens the
-     * timbre). Both through the same stereo soundboard. */
-    pf_string_params pon;  pf_string_defaults(&pon, SR);                       /* default on */
-    pf_string_params poff = pon; poff.hammer_vel_hardness = 0.0;               /* flat */
-    printf("velocity->brightness hardness: on=%.2f off=%.2f\n",
-           pon.hammer_vel_hardness, poff.hammer_vel_hardness);
+    /* A/B for this milestone: the inharmonicity and decay held FLAT across the
+     * keyboard (pitch slopes 0) vs scaled by pitch from the Salamander fit. Same
+     * A4 tone in both; the difference is how bass and treble behave. */
+    pf_string_params pon;  pf_string_defaults(&pon, SR);                       /* fitted */
+    pf_string_params poff = pon;                                              /* flat */
+    poff.inharm_pitch = 0.0; poff.decay_pitch = 0.0;
+    printf("pitch fit: B~f0^%.2f  T60~f0^%.2f  (flat = 0)\n",
+           pon.inharm_pitch, pon.decay_pitch);
 
     render_song(&poff, buf, 0);
     { static pf_board_stereo st; pf_board_stereo_init(&st, &bp, SR);
@@ -130,7 +129,7 @@ int main(void)
 
     int rc = 0;
     rc |= finish_stereo("out_flat.wav", smo, TOTAL_SAMPLES, "flat ");
-    rc |= finish_stereo(OUT_PATH,       sst, TOTAL_SAMPLES, "vel  ");
+    rc |= finish_stereo(OUT_PATH,       sst, TOTAL_SAMPLES, "fit  ");
 
     free(buf); free(sst); free(smo);
     return rc;

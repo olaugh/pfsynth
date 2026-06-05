@@ -21,8 +21,10 @@ typedef struct {
     double sample_rate;          /* Hz, e.g. 44100 */
 
     /* String / loop */
-    double inharmonicity;        /* B in f_n ~ n*f0*sqrt(1+B*n^2). ~1e-4..1e-2 */
-    double decay_t60;            /* seconds for the fundamental to drop 60 dB */
+    double inharmonicity;        /* B in f_n ~ n*f0*sqrt(1+B*n^2), at A4 (440 Hz) */
+    double inharm_pitch;         /* B scales as (f0/440)^this across the keyboard */
+    double decay_t60;            /* seconds for the fundamental to drop 60 dB, at A4 */
+    double decay_pitch;          /* T60 scales as (f0/440)^this (negative: treble faster) */
     double release_t60;          /* seconds for the fundamental to drop 60 dB once
                                   * the damper falls (note-off). ~0.1..0.3 */
     double damping;              /* extra high-frequency loss, [0,1). Brightness. */

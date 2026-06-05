@@ -41,8 +41,14 @@ static double pd_allpass(double w, double a)
 void pf_string_defaults(pf_string_params *p, double sample_rate)
 {
     p->sample_rate         = sample_rate;
-    p->inharmonicity       = 4.0e-4;   /* moderate piano stiffness */
-    p->decay_t60           = 7.0;
+    /* inharmonicity and decay are the REFERENCE values at A4 (440 Hz); pf_string_init
+     * scales them by pitch (see below). Fit to a Salamander Grand (Yamaha C5). */
+    p->inharmonicity       = 3.5e-4;   /* requested B at A4; the (approximate) dispersion
+                                        * realizes ~1.8x this, so output B(A4) ~= 6.5e-4,
+                                        * matching the measured Salamander Grand */
+    p->inharm_pitch        = 1.5;      /* fit: B ~ f0^1.5 (treble much stiffer) */
+    p->decay_t60           = 5.75;     /* T60 at A4; rises toward the bass */
+    p->decay_pitch         = -0.6;     /* fit: T60 ~ f0^-0.6 (treble decays faster) */
     p->release_t60         = 0.15;     /* damper kills the note quickly */
     p->damping             = 0.20;
     p->dispersion_sections = 8;
@@ -148,11 +154,20 @@ void pf_string_init(pf_string *s, const pf_string_params *p, double f0)
     s->n_strings = N;
     s->couple    = (N > 1) ? p->coupling : 0.0;   /* lone string: no bridge load */
 
+    /* Pitch-scale the reference (A4) inharmonicity and decay, fit to a real grand:
+     *   B(f0)   = B_A4   * (f0/440)^1.5   -- stiffer/sharper partials in the treble
+     *   T60(f0) = T60_A4 * (440/f0)^0.6   -- bass rings long, treble dies fast
+     * (curve shape baked in here; the params carry the A4 magnitudes.) */
+    pf_string_params sp = *p;
+    double pitch = f0 / 440.0;
+    sp.inharmonicity = p->inharmonicity * pow(pitch, p->inharm_pitch);
+    sp.decay_t60     = p->decay_t60     * pow(pitch, p->decay_pitch);
+
     for (int k = 0; k < N; k++) {
         /* spread the strings symmetrically around f0 by unison_detune cents */
         double cents = (N > 1) ? ((double)k / (N - 1) - 0.5) * p->unison_detune : 0.0;
         double f0k   = f0 * pow(2.0, cents / 1200.0);
-        init_substring(&s->str[k], p, f0k);
+        init_substring(&s->str[k], &sp, f0k);
         /* a slight per-string hammer asymmetry guarantees the slow differential
          * mode is excited, so there's an audible aftersound, not just a prompt */
         s->str[k].ham_gain = 1.0 - 0.04 * (double)k;

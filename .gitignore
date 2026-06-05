@@ -1,6 +1,7 @@
 build/
 out.wav
 out_flat.wav
+calib/
 *.o
 maestro/
 *.dSYM/

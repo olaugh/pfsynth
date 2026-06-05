@@ -39,12 +39,16 @@ sharing one nonlinear felt hammer. Each loop is:
 - **Delay line** — the waveguide loop, tuned to the note pitch (integer delay + a
   first-order allpass fractional tuner).
 - **Loss filter** — a one-pole lowpass in the loop for frequency-dependent decay (bright
-  attack, mellow tail). Overall loop gain sets the fundamental T60.
+  attack, mellow tail). Overall loop gain sets the fundamental T60, which is **pitch-
+  dependent**: `T60(f0) = decay_t60·(f0/440)^decay_pitch`, `decay_pitch ≈ -0.6` — the bass
+  rings many seconds, the treble dies in ~1–2 s, fit to a real grand.
 - **Dispersion** — a cascade of first-order allpass filters producing stiff-string
-  inharmonicity, partials stretched as `f_n ≈ n·f0·√(1 + B·n²)`. `B` is a parameter; it's
-  what makes it read as "piano" rather than "Karplus-Strong pluck." The allpass coefficient
-  is fit at init to approximate the target stretch (one coefficient can't match all
-  partials exactly — this is intentionally approximate for now).
+  inharmonicity, partials stretched as `f_n ≈ n·f0·√(1 + B·n²)`. `B` is **pitch-dependent**,
+  fit to a real grand: `B(f0) = inharmonicity·(f0/440)^inharm_pitch` with `inharm_pitch ≈
+  1.5` — the treble is far stiffer/sharper than the bass. The allpass coefficient is fit at
+  init to approximate the target stretch (one coefficient can't match all partials exactly;
+  it also realizes ~1.8× the requested `B`, so the `inharmonicity` param is pre-divided to
+  land the *output* B on the measured value — see Calibration).
 - **Nonlinear felt hammer** — a mass with a hardening spring, force `F = K·δ^p` (compression
   `δ`, exponent `p ≈ 2–3`). The hammer–string interaction is a delay-free loop (force depends
   on string velocity depends on force); it's resolved per sample with an **implicit Newton
@@ -101,9 +105,20 @@ one-pole allpass only spreads the highs). The dry path stays centered, so bass i
 centered while the mid/treble body opens up — `stereo_width` (~0.2) sets the amount. This is
 what the host actually runs over the mix; the offline harness writes a stereo `out.wav`.
 
+### Calibration against a real piano (`src/host/analyze.c`)
+Rather than tune everything by ear, the model is fit to a real grand (the free **Salamander
+Grand**, Yamaha C5, isolated notes × 16 velocities — `calib/`, gitignored). `make analyze`
+builds `pfsynth-analyze <file.wav> <midi-note>`, a dependency-free tool that measures, per
+note: the partial frequencies → inharmonicity `B` (via a `(f_k/k)²` vs `k²` regression, so
+stretched tuning falls out), the fundamental's decay → `T60`, and the spectral centroid.
+Sweeping the sample set gave `B ~ f0^1.5` and `T60 ~ f0^-0.6`, now baked into the model.
+Close the loop by rendering a model note and running it back through `analyze`; the realized
+`B`/`T60` are checked against the measured targets. (The single-coefficient dispersion only
+*approximates* a given `B`, so the requested value is calibrated to land the realized one.)
+
 ### Deferred to later milestones
-Sympathetic resonance, per-register decay tuning, the rest of the instrument family, the
-serialized song format.
+Sympathetic resonance, accurate dispersion (realize a target `B` exactly), velocity-
+brightness vs the real samples, the rest of the instrument family, the serialized song format.
 
 ## Host tooling
 
@@ -166,14 +181,16 @@ pf_board_reset(&board);                    // clear ring (on load/seek/panic)
 make           # optimized build  -> build/pfsynth, renders out.wav
 make debug     # -fsanitize=address,undefined
 make run       # build + render
+make analyze   # build pfsynth-analyze (measure real piano samples to fit the model)
 make clean
 ```
 
 No external dependencies. The render harness in `src/host/main.c` is driven by a hardcoded
 `{note, velocity, time_sec}` event list (foreshadowing the serialized song format) and
 peak-normalizes the final buffer so output is always audible regardless of absolute model
-scale. The hardcoded SONG is currently a velocity staircase; it writes two stereo files for
-an A/B: `out_flat.wav` (velocity→brightness off — loudness only) and `out.wav` (on).
+scale. The hardcoded SONG is currently an octave arpeggio; it writes two stereo files for an
+A/B: `out_flat.wav` (inharmonicity/decay held flat across the keyboard) and `out.wav` (both
+pitch-scaled from the Salamander fit).
 
 ## Conventions
 
