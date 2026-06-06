@@ -13,7 +13,8 @@ SRC     := src/core/pf_string.c src/core/pf_board.c src/core/pf_reverb.c \
 
 # Interactive TUI: core + engine + midi + CoreAudio + notcurses.
 TUI_SRC := src/core/pf_string.c src/core/pf_board.c src/core/pf_reverb.c \
-           src/host/midi.c src/host/engine.c src/host/audio.c src/host/tui.c
+           src/host/midi.c src/host/engine.c src/host/audio.c src/host/wav.c \
+           src/host/tui.c
 
 # notcurses lives in its homebrew keg (no pkg-config installed).
 NC_PREFIX := /opt/homebrew/opt/notcurses

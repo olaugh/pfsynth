@@ -11,6 +11,7 @@
 #include "engine.h"
 #include "audio.h"
 #include "midi.h"
+#include "wav.h"
 
 #include <notcurses/notcurses.h>
 
@@ -125,6 +126,13 @@ typedef struct { char name[256]; int isdir; } entry;
 static char   g_dir[1024];
 static char   g_lib_root[1024];      /* initial library dir; CSV keys are relative to it */
 static entry *g_entries;
+
+/* A/B reference recording (real maestro audio for the loaded piece) */
+static float *g_ref_buf;             /* host-owned interleaved stereo */
+static long   g_ref_frames;
+static int    g_ref_loaded;
+static int    g_ref_on;              /* outputting reference instead of synth */
+static char   g_ref_pending[1024];   /* relative MIDI path to load a reference for */
 static int    g_nentries, g_capentries;
 static int    g_sel, g_scroll;
 
@@ -361,6 +369,7 @@ static int load_result(pf_engine *e, int mi, char *status, size_t statuslen)
     if (pf_midi_load(&song, full) == 0) {
         pf_engine_load(e, &song);
         pf_engine_play(e);
+        snprintf(g_ref_pending, sizeof g_ref_pending, "%s", m->path);   /* A/B reference */
         snprintf(status, statuslen, "playing: %s - %s", m->composer, m->title);
         return 1;
     }
@@ -392,6 +401,10 @@ static int browser_enter(pf_engine *e, char *status, size_t statuslen)
     if (pf_midi_load(&song, full) == 0) {
         pf_engine_load(e, &song);
         pf_engine_play(e);
+        const char *rd = rel_under_root();      /* request the A/B reference audio */
+        if (rd && *rd)      snprintf(g_ref_pending, sizeof g_ref_pending, "%s/%s", rd, en->name);
+        else if (rd)        snprintf(g_ref_pending, sizeof g_ref_pending, "%s", en->name);
+        else                g_ref_pending[0] = 0;
         const meta_row *m = entry_meta(en);
         if (m) snprintf(status, statuslen, "playing: %s - %s", m->composer, m->title);
         else   snprintf(status, statuslen, "playing: %s", en->name);
@@ -652,6 +665,10 @@ static void draw(struct notcurses *nc, struct ncplane *n, pf_engine *e,
     ncplane_set_fg_rgb8(n, 200, 200, 210);
     ncplane_printf_yx(n, ky, 1, "VOICES %3d   PEDAL %s",
                       voices, pedal ? "DOWN" : "up ");
+    if (g_ref_loaded) {
+        ncplane_set_fg_rgb8(n, g_ref_on ? 255 : 130, g_ref_on ? 140 : 200, 140);
+        ncplane_printf_yx(n, ky, 30, "A/B: %s", g_ref_on ? "REFERENCE  " : "pfsynth    ");
+    }
     ncplane_set_styles(n, NCSTYLE_NONE);
     if (g_pix) {
         kb_update(nc, n, active);          /* pixel-graphics keyboard (kitty/sixel) */
@@ -671,7 +688,7 @@ static void draw(struct notcurses *nc, struct ncplane *n, pf_engine *e,
     ncplane_set_fg_rgb8(n, 120, 120, 130);
     ncplane_printf_yx(n, (int)dy - 1, 1,
         "TAB pane  up/dn select  l/r adjust  / search  ENTER load  SPACE play  "
-        "[ ] seek  Esc up/quit  Q quit");
+        "[ ] seek  a A/B ref  Esc up/quit  Q quit");
     if (status && status[0]) {
         ncplane_set_fg_rgb8(n, 120, 230, 140);
         ncplane_printf_yx(n, (int)dy - 2, 1, "%.*s", (int)dx - 2, status);
@@ -697,6 +714,46 @@ static void draw(struct notcurses *nc, struct ncplane *n, pf_engine *e,
     }
 
     notcurses_render(nc);
+}
+
+/* Load the A/B reference recording for `rel` (a MIDI path relative to the library
+ * root). The maestro audio lives in the big zip; extract it to a cache on first
+ * use (blocks briefly), then load it. Quietly no-ops for non-maestro files. */
+static void load_reference(struct notcurses *nc, struct ncplane *std, pf_engine *e,
+                           int focus_lib, const char *rel, char *status, size_t sl)
+{
+    g_ref_on = 0; g_ref_loaded = 0;
+    pf_engine_set_reference(e, NULL, 0);
+    if (!rel || !rel[0]) return;
+
+    char relwav[1024];
+    snprintf(relwav, sizeof relwav, "%s", rel);
+    char *dot = strrchr(relwav, '.');
+    if (!dot) return;
+    snprintf(dot, sizeof relwav - (size_t)(dot - relwav), ".wav");   /* .midi -> .wav */
+
+    const char *bs = strrchr(relwav, '/'); bs = bs ? bs + 1 : relwav;
+    char cache[1100];
+    snprintf(cache, sizeof cache, "calib/maestro-ref/%s", bs);
+
+    FILE *tf = fopen(cache, "rb");
+    if (tf) { fclose(tf); }
+    else {
+        snprintf(status, sl, "extracting reference audio (first time for this piece)...");
+        draw(nc, std, e, focus_lib, status);     /* show the message before we block */
+        char cmd[2600];
+        snprintf(cmd, sizeof cmd,
+            "unzip -o -j calib/maestro-full.zip \"maestro-v3.0.0/%s\" -d calib/maestro-ref "
+            ">/dev/null 2>&1", relwav);
+        if (system(cmd) != 0) { /* zip missing / failed: just stay synth-only */ }
+    }
+
+    float *buf; long fr; int sr;
+    if (wav_read_stereo(cache, &buf, &fr, &sr) == 0) {
+        pf_engine_set_reference(e, buf, fr);
+        if (g_ref_buf) free(g_ref_buf);
+        g_ref_buf = buf; g_ref_frames = fr; g_ref_loaded = 1;
+    }
 }
 
 int main(int argc, char **argv)
@@ -819,8 +876,25 @@ int main(int argc, char **argv)
                 break;
             case '[': seek_rel(&eng, -5.0); break;
             case ']': seek_rel(&eng, +5.0); break;
+            case 'a': case 'A':             /* A/B: toggle synth <-> reference recording */
+                if (g_ref_loaded) {
+                    g_ref_on = !g_ref_on;
+                    pf_engine_set_ref_on(&eng, g_ref_on);
+                    snprintf(status, sizeof status, "%s", g_ref_on ?
+                             "A/B: REFERENCE recording" : "A/B: pfsynth");
+                }
+                break;
             default: break;
             }
+        }
+
+        /* load the A/B reference for a just-loaded piece (may briefly block to
+         * extract the audio from the maestro zip) */
+        if (g_ref_pending[0]) {
+            char rel[1024];
+            snprintf(rel, sizeof rel, "%s", g_ref_pending);
+            g_ref_pending[0] = 0;
+            load_reference(nc, std, &eng, focus_lib, rel, status, sizeof status);
         }
 
         struct timespec ts = { 0, 16 * 1000 * 1000 };  /* ~60 fps */
@@ -833,5 +907,6 @@ int main(int argc, char **argv)
     free(g_entries);
     free(g_meta);
     free(g_results);
+    free(g_ref_buf);
     return 0;
 }

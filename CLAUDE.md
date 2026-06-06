@@ -156,6 +156,12 @@ patches and playing back MIDI. It is strictly dev-machine tooling — none of it
   transport, with a now-playing 88-key keyboard that lights up as the song sounds. On
   terminals with pixel graphics (kitty protocol / sixel, via notcurses `NCBLIT_PIXEL`) it's
   drawn as a real black-and-white keyboard bitmap; it falls back to an ASCII strip otherwise.
+  **A/B reference** (`a` key): toggles the output between the synth and the *real maestro
+  recording* of the loaded piece (MIDI and audio are sample-aligned in maestro). The audio is
+  extracted on demand from `calib/maestro-full.zip` into `calib/maestro-ref/` and loaded via
+  `wav_read_stereo`; the engine outputs it in place of the synth while the synth keeps
+  rendering underneath, so toggling is seamless. Invaluable for matching the model to a real
+  grand by ear.
   The MIDI files carry no titles, so the browser and a `/` search view read composer /
   title / duration from the dataset CSV (`maestro-v3.0.0.csv`), parsed once at startup
   and keyed by relative path.
@@ -166,9 +172,9 @@ make tui                         # build build/pfsynth-tui
 ```
 
 TUI keys: TAB switch pane · up/dn select · left/right adjust param · `/` search by
-composer/title · ENTER load file · SPACE play/pause · `[` `]` seek · ESC up a directory
-(quits at the library root / on the params pane, and exits search) · `Q` quit (both via a
-confirmation modal).
+composer/title · ENTER load file · SPACE play/pause · `[` `]` seek · `a` A/B synth vs
+reference recording · ESC up a directory (quits at the library root / on the params pane,
+and exits search) · `Q` quit (both via a confirmation modal).
 
 The TUI depends on **notcurses** (homebrew keg at `/opt/homebrew/opt/notcurses`, no
 pkg-config installed so the path is hardcoded in the Makefile) and macOS CoreAudio. The

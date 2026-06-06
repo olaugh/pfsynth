@@ -11,4 +11,9 @@ int wav_write_mono16(const char *path, const float *samples, int n,
 int wav_write_stereo16(const char *path, const float *interleaved, int n,
                        int sample_rate);
 
+/* Read a 16-bit PCM WAV into a malloc'd interleaved-stereo float buffer (mono
+ * is duplicated to both channels, extra channels dropped), peak-normalized to
+ * ~0.7. Caller frees *out. Returns 0 on success; *frames = stereo frames. */
+int wav_read_stereo(const char *path, float **out, long *frames, int *sample_rate);
+
 #endif

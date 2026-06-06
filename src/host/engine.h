@@ -43,6 +43,13 @@ typedef struct {
     pf_board_stereo board;        /* one shared stereo modal soundboard over the mix */
     pf_reverb       reverb;       /* room reverb over the final stereo mix */
 
+    /* A/B reference: a real recording of the loaded piece, output in place of the
+     * synth when ref_on (synth still renders underneath, so toggling is instant).
+     * The host owns the buffer; the engine just borrows the pointer. */
+    const float *ref;             /* interleaved stereo, host-owned */
+    long         ref_frames;
+    int          ref_on;
+
     /* sequencer */
     pf_song song;
     int     has_song;
@@ -62,6 +69,11 @@ void pf_engine_set_params(pf_engine *e, const pf_string_params *p);
 void pf_engine_set_master(pf_engine *e, double gain);
 void pf_engine_set_body(pf_engine *e, double mix);   /* soundboard amount, 0 = bypass */
 void pf_engine_set_reverb(pf_engine *e, double wet);  /* room amount, 0 = dry */
+
+/* A/B reference recording (interleaved stereo at the engine sample rate, host-
+ * owned). Pass NULL to clear. set_ref_on toggles output between synth and ref. */
+void pf_engine_set_reference(pf_engine *e, const float *interleaved, long frames);
+void pf_engine_set_ref_on(pf_engine *e, int on);
 
 /* Live triggers (UI keyboard). velocity 1..127 like MIDI. */
 void pf_engine_note_on(pf_engine *e, int note, int vel);

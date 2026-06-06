@@ -69,6 +69,22 @@ void pf_engine_set_reverb(pf_engine *e, double wet)
     pthread_mutex_unlock(&e->lock);
 }
 
+void pf_engine_set_reference(pf_engine *e, const float *interleaved, long frames)
+{
+    pthread_mutex_lock(&e->lock);
+    e->ref = interleaved;
+    e->ref_frames = interleaved ? frames : 0;
+    if (!interleaved) e->ref_on = 0;
+    pthread_mutex_unlock(&e->lock);
+}
+
+void pf_engine_set_ref_on(pf_engine *e, int on)
+{
+    pthread_mutex_lock(&e->lock);
+    e->ref_on = (on && e->ref) ? 1 : 0;
+    pthread_mutex_unlock(&e->lock);
+}
+
 /* --- voice allocation (caller holds the lock) --- */
 
 static int alloc_slot(pf_engine *e, int note)
@@ -247,6 +263,7 @@ static void render_chunk(pf_engine *e, float *out, int n)
 void pf_engine_render(pf_engine *e, float *out, int frames)
 {
     pthread_mutex_lock(&e->lock);
+    double ref_pos0 = e->play_pos;   /* for the A/B reference, before we advance */
     int i = 0;
     while (i < frames) {
         int chunk = frames - i;
@@ -266,6 +283,21 @@ void pf_engine_render(pf_engine *e, float *out, int frames)
         render_chunk(e, out + 2 * i, chunk);
         if (e->playing) e->play_pos += (double)chunk / e->sr;
         i += chunk;
+    }
+
+    /* A/B: overwrite the synth output with the reference recording at the same
+     * position (the synth still ran above, so flipping back is seamless). */
+    if (e->ref_on && e->ref) {
+        long off = (long)(ref_pos0 * e->sr + 0.5);
+        for (int j = 0; j < frames; j++) {
+            long s = off + j;
+            if (s >= 0 && s < e->ref_frames) {
+                out[2 * j]     = e->ref[2 * s];
+                out[2 * j + 1] = e->ref[2 * s + 1];
+            } else {
+                out[2 * j] = out[2 * j + 1] = 0.0f;
+            }
+        }
     }
     pthread_mutex_unlock(&e->lock);
 }
