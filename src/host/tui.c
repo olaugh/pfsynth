@@ -416,6 +416,115 @@ static void hline(struct ncplane *n, int y, unsigned dx)
     for (unsigned x = 0; x < dx; x++) ncplane_putstr_yx(n, y, (int)x, "-");
 }
 
+/* ---------------- pixel-graphics piano (kitty/sixel via notcurses) ---------- */
+
+static int             g_pix = 0;          /* terminal supports pixel blitting */
+static struct ncplane *g_kbpl = NULL;      /* dedicated plane for the keyboard image */
+static int             g_kb_py, g_kb_px, g_kb_rows, g_kb_cols;
+static unsigned char   g_kb_last[128];     /* last-drawn active set (re-blit on change) */
+static int             g_kb_force = 1;
+static double          g_kb_last_ms = 0;
+
+static double pix_now_ms(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000.0 + ts.tv_nsec / 1.0e6;
+}
+static int clmp8(int v) { return v < 0 ? 0 : (v > 255 ? 255 : v); }
+
+static int note_is_black(int n) { int pc = n % 12; return pc==1||pc==3||pc==6||pc==8||pc==10; }
+
+/* paint a realistic 88-key keyboard (A0..C8) into an RGBA buffer */
+static void piano_rgba(unsigned char *buf, int W, int H, const unsigned char active[128])
+{
+    for (long i = 0; i < (long)W * H; i++) {        /* dark felt background */
+        buf[i*4] = 16; buf[i*4+1] = 16; buf[i*4+2] = 20; buf[i*4+3] = 255;
+    }
+    int whites = 52, keyw = W / whites; if (keyw < 1) keyw = 1;
+    int bw = (int)(keyw * 0.64); if (bw < 1) bw = 1;
+    int bh = (int)(H * 0.62);
+
+    /* white keys (full height), left to right */
+    int wi = 0;
+    for (int note = 21; note <= 108; note++) {
+        if (note_is_black(note)) continue;
+        int x0 = wi * keyw, x1 = x0 + keyw - 1;     /* 1px gap on the right */
+        int on = active[note];
+        for (int y = 0; y < H; y++) {
+            double shade = (y > H * 0.86) ? 0.78 : 1.0;     /* bottom shadow */
+            int r, g, b;
+            if (on) { r = 255; g = 206; b = 96; }
+            else    { r = 244; g = 244; b = 237; }
+            r = clmp8((int)(r*shade)); g = clmp8((int)(g*shade)); b = clmp8((int)(b*shade));
+            for (int x = x0; x < x1 && x < W; x++) {
+                long o = ((long)y * W + x) * 4;
+                buf[o]=r; buf[o+1]=g; buf[o+2]=b; buf[o+3]=255;
+            }
+        }
+        wi++;
+    }
+    /* black keys on top (upper portion only), centered on white-key boundaries */
+    wi = 0;
+    for (int note = 21; note <= 108; note++) {
+        if (!note_is_black(note)) { wi++; continue; }
+        int cx = wi * keyw, x0 = cx - bw/2, x1 = cx + bw/2;
+        int on = active[note];
+        for (int y = 0; y < bh; y++) {
+            int bevel = (y < bh * 0.16) ? 38 : 0;   /* lighter top edge */
+            int r, g, b;
+            if (on) { r = 255; g = 162; b = 52; }
+            else    { r = 24;  g = 24;  b = 28; }
+            r = clmp8(r+bevel); g = clmp8(g+bevel); b = clmp8(b+bevel);
+            for (int x = x0; x < x1; x++) {
+                if (x < 0 || x >= W) continue;
+                long o = ((long)y * W + x) * 4;
+                buf[o]=r; buf[o+1]=g; buf[o+2]=b; buf[o+3]=255;
+            }
+        }
+    }
+}
+
+/* (re)build and blit the keyboard image; throttled, and only when notes change */
+static void kb_update(struct notcurses *nc, struct ncplane *std,
+                      const unsigned char active[128])
+{
+    unsigned dy, dx; ncplane_dim_yx(std, &dy, &dx);
+    int rows = 2, cols = (int)dx - 2, py = (int)dy - 4, px = 1;  /* below the VOICES line */
+    if (cols < 8 || py < 1) return;
+
+    if (!g_kbpl || g_kb_rows != rows || g_kb_cols != cols || g_kb_py != py || g_kb_px != px) {
+        if (g_kbpl) { ncplane_destroy(g_kbpl); g_kbpl = NULL; }
+        struct ncplane_options o; memset(&o, 0, sizeof o);
+        o.y = py; o.x = px; o.rows = rows; o.cols = cols;
+        g_kbpl = ncplane_create(std, &o);
+        g_kb_py = py; g_kb_px = px; g_kb_rows = rows; g_kb_cols = cols; g_kb_force = 1;
+    }
+    if (!g_kbpl) return;
+
+    double now = pix_now_ms();
+    if (!g_kb_force && (memcmp(g_kb_last, active, 128) == 0 || now - g_kb_last_ms < 40.0))
+        return;
+    memcpy(g_kb_last, active, 128);
+    g_kb_force = 0; g_kb_last_ms = now;
+
+    unsigned pxy, pxx;
+    ncplane_pixel_geom(g_kbpl, &pxy, &pxx, NULL, NULL, NULL, NULL);
+    int Wp = (int)pxx, Hp = (int)pxy;
+    if (Wp < 8 || Hp < 4) return;
+    unsigned char *rgba = malloc((size_t)Wp * Hp * 4);
+    if (!rgba) return;
+    piano_rgba(rgba, Wp, Hp, active);
+    struct ncvisual *v = ncvisual_from_rgba(rgba, Hp, Wp * 4, Wp);
+    if (v) {
+        struct ncvisual_options vo; memset(&vo, 0, sizeof vo);
+        vo.n = g_kbpl; vo.blitter = NCBLIT_PIXEL; vo.scaling = NCSCALE_NONE;
+        ncvisual_blit(nc, v, &vo);
+        ncvisual_destroy(v);
+    }
+    free(rgba);
+}
+
 static void draw(struct notcurses *nc, struct ncplane *n, pf_engine *e,
                  int focus_lib, const char *status)
 {
@@ -544,15 +653,18 @@ static void draw(struct notcurses *nc, struct ncplane *n, pf_engine *e,
     ncplane_printf_yx(n, ky, 1, "VOICES %3d   PEDAL %s",
                       voices, pedal ? "DOWN" : "up ");
     ncplane_set_styles(n, NCSTYLE_NONE);
-    int kw = (int)dx - 2;
-    for (int k = 0; k < 88 && k < kw; k++) {
-        int note = 21 + k;
-        int pc = note % 12;
-        int black = (pc==1||pc==3||pc==6||pc==8||pc==10);
-        if (active[note]) ncplane_set_fg_rgb8(n, 255, 230, 80);
-        else if (black)   ncplane_set_fg_rgb8(n, 90, 90, 110);
-        else              ncplane_set_fg_rgb8(n, 170, 170, 180);
-        ncplane_putstr_yx(n, ky + 2, 1 + k, active[note] ? "#" : (black ? "." : "|"));
+    if (g_pix) {
+        kb_update(nc, n, active);          /* pixel-graphics keyboard (kitty/sixel) */
+    } else {
+        int kw = (int)dx - 2;
+        for (int k = 0; k < 88 && k < kw; k++) {
+            int note = 21 + k;
+            int black = note_is_black(note);
+            if (active[note]) ncplane_set_fg_rgb8(n, 255, 230, 80);
+            else if (black)   ncplane_set_fg_rgb8(n, 90, 90, 110);
+            else              ncplane_set_fg_rgb8(n, 170, 170, 180);
+            ncplane_putstr_yx(n, ky + 2, 1 + k, active[note] ? "#" : (black ? "." : "|"));
+        }
     }
 
     /* footer */
@@ -613,6 +725,7 @@ int main(int argc, char **argv)
     struct notcurses *nc = notcurses_init(&opts, NULL);
     if (!nc) { pf_audio_stop(); fprintf(stderr, "notcurses init failed\n"); return 1; }
     struct ncplane *std = notcurses_stdplane(nc);
+    g_pix = (notcurses_check_pixel_support(nc) != NCPIXEL_NONE);  /* kitty/sixel keyboard? */
 
     list_dir();
 

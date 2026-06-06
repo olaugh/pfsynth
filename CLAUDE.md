@@ -153,7 +153,9 @@ patches and playing back MIDI. It is strictly dev-machine tooling — none of it
 - `src/host/audio.{h,c}` — CoreAudio default-output AudioUnit (no external deps; system
   frameworks only). Pulls `pf_engine_render` from the RT thread, 44.1k float stereo.
 - `src/host/tui.c` — the notcurses UI: live patch editor, maestro file browser, and
-  transport, with a now-playing strip showing the 88 keys light up as the song sounds.
+  transport, with a now-playing 88-key keyboard that lights up as the song sounds. On
+  terminals with pixel graphics (kitty protocol / sixel, via notcurses `NCBLIT_PIXEL`) it's
+  drawn as a real black-and-white keyboard bitmap; it falls back to an ASCII strip otherwise.
   The MIDI files carry no titles, so the browser and a `/` search view read composer /
   title / duration from the dataset CSV (`maestro-v3.0.0.csv`), parsed once at startup
   and keyed by relative path.
