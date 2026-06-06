@@ -51,6 +51,9 @@ typedef struct {
     double hammer_vel_hardness;  /* how strongly strike velocity stiffens the felt:
                                   * K scales as (vel/0.6)^this. 0 = velocity-independent;
                                   * higher = harder/brighter ff, softer/mellower pp. */
+    double attack;               /* contact-noise "bite": roughens the hammer force during
+                                  * contact (F *= 1 + attack*noise), adding the broadband
+                                  * percussive flash a smooth felt force can't. 0 = off. */
     double injection;            /* g_inj: force->displacement coupling per sample */
 
     double output_gain;          /* final scaling (host may re-normalize anyway) */
@@ -103,6 +106,10 @@ typedef struct pf_string {
     double ham_m, ham_K, ham_p;
     double ham_K0;               /* base stiffness; strike scales ham_K from this */
     double ham_vhard;            /* velocity -> stiffness exponent */
+    double attack;               /* contact-noise amount */
+    unsigned atk_rng;            /* contact-noise PRNG state */
+    double bite_env;             /* attack-peak envelope for the contact-noise flash */
+    int    atk_n;                /* samples left in the attack-peak tracking window */
     double last_F;               /* warm-start for the implicit solve */
 
     double g_inj;

@@ -65,6 +65,7 @@ void pf_string_defaults(pf_string_params *p, double sample_rate)
     p->hammer_exponent     = 2.3;
     p->hammer_vmax         = 5.0;
     p->hammer_vel_hardness = 1.0;      /* velocity stiffens the felt: mellow pp, bright ff */
+    p->attack              = 0.6;      /* contact-noise bite (the percussive piano flash) */
     /* force -> displacement injection per sample = dt/(2Z), Z ~ 2 */
     p->injection           = 1.0 / (2.0 * 2.0) / sample_rate;
 
@@ -194,6 +195,8 @@ void pf_string_init(pf_string *s, const pf_string_params *p, double f0)
     s->ham_K     = s->ham_K0;
     s->ham_p     = p->hammer_exponent;
     s->ham_vhard = p->hammer_vel_hardness;
+    s->attack    = p->attack;
+    s->atk_rng   = 0x9E3779B9u ^ (unsigned)(f0 * 13.0);   /* deterministic, per-pitch */
     s->g_inj     = p->injection;
     /* per-register loudness makeup: lift the treble so it isn't buried (real
      * grands radiate the treble far better than a bare waveguide + body do).
@@ -220,6 +223,8 @@ void pf_string_strike(pf_string *s, double velocity)
     if (vh > 4.0) vh = 4.0;
     s->ham_K = s->ham_K0 * vh;
 
+    s->bite_env  = 0.0;
+    s->atk_n     = (int)(0.005 * s->sr);   /* track the attack peak over ~5 ms */
     s->ham_pos   = 0.0;
     s->ham_vel   = velocity * /* launch toward the string */ 5.0;
     s->ham_engaged   = 1;
@@ -347,6 +352,21 @@ void pf_string_process(pf_string *s, float *out, int n)
         double dy = junc_sum - s->dc_x1 + PF_DC_R * s->dc_y1;
         s->dc_x1 = junc_sum; s->dc_y1 = dy;
 
-        out[i] += (float)(dy * s->out_gain);
+        /* Contact-noise "bite": a broadband percussive flash layered onto the
+         * radiated output (the hammer/key knock a smooth felt force can't make).
+         * bite_env captures the note's attack peak over the first ~5 ms, then
+         * decays, so the noise is a brief flash at the strike, not a noisy tail.
+         * Added to the output (not the loop) so the string loss doesn't eat it. */
+        double bite = 0.0;
+        if (s->attack > 0.0) {
+            double ad = dy < 0 ? -dy : dy;
+            if (s->atk_n > 0) { if (ad > s->bite_env) s->bite_env = ad; s->atk_n--; }
+            else              { s->bite_env *= 0.990; }
+            s->atk_rng = s->atk_rng * 1664525u + 1013904223u;
+            double nz = ((double)(s->atk_rng >> 9) / 8388608.0) - 1.0;   /* [-1, 1) */
+            bite = s->attack * s->bite_env * nz;
+        }
+
+        out[i] += (float)((dy + bite) * s->out_gain);
     }
 }

@@ -58,6 +58,12 @@ sharing one nonlinear felt hammer. Each loop is:
   brighter, clangy ff) and a slow one a softer hammer (longer contact → mellow pp). This is
   the main dynamics→timbre coupling; without it, velocity only changes loudness. (The rich
   soundboard masks some of it in the mix — a trade against the body fullness.)
+- **Graduated hammers + contact-noise bite** — the hammer is stiffer/lighter toward the
+  treble (`hammer_pitch_k/m`) so the strike stays short relative to the period and excites a
+  rich harmonic series at every pitch (a fixed hammer lowpasses high notes into dull sines).
+  A smooth felt force still can't make the percussive *attack flash*, so `attack` adds a
+  short broadband contact-noise burst on the radiated output at each onset, enveloped to the
+  attack peak (the hammer/key "knock") — the difference between "piano" and "harp."
 - **Strike-point comb** — the hammer hits at `strike_pos` (a fraction of the string length,
   ~1/8), so partials with a node there can't be excited. Modeled as the injected excitation
   being high-passed by `(1 − z^−β)`, `β = strike_pos·period`: the delayed term is the wave
