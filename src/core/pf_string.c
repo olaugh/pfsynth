@@ -58,8 +58,10 @@ void pf_string_defaults(pf_string_params *p, double sample_rate)
     p->coupling            = 0.006;    /* bridge load: common-mode (prompt) decay rate */
     p->strike_pos          = 0.12;     /* hammer ~1/8 along the string (0 = off) */
 
-    p->hammer_mass         = 4.0e-3;   /* ~4 g */
-    p->hammer_stiffness    = 4.5e7;    /* harder felt -> brighter, more present attack */
+    p->hammer_mass         = 4.0e-3;   /* ~4 g at A4 */
+    p->hammer_stiffness    = 2.0e8;    /* hard base -> a crisp, harmonic-rich strike */
+    p->hammer_pitch_k      = 2.5;      /* graduated: treble hammers much harder ... */
+    p->hammer_pitch_m      = 0.45;     /* ... and lighter, so the strike stays short */
     p->hammer_exponent     = 2.3;
     p->hammer_vmax         = 5.0;
     p->hammer_vel_hardness = 1.0;      /* velocity stiffens the felt: mellow pp, bright ff */
@@ -182,10 +184,14 @@ void pf_string_init(pf_string *s, const pf_string_params *p, double f0)
         if (beta >= 1 && beta < PF_MAX_DELAY) s->strike_beta = beta;
     }
 
-    /* shared hammer */
-    s->ham_m     = p->hammer_mass;
-    s->ham_K0    = p->hammer_stiffness;        /* base; strike scales by velocity */
-    s->ham_K     = p->hammer_stiffness;
+    /* shared hammer, graduated across the keyboard: stiffer + lighter toward the
+     * treble so the strike stays short relative to the (short) period and excites
+     * a rich harmonic series, instead of lowpassing high notes into dull sines. */
+    double hk = pow(f0 / 440.0, p->hammer_pitch_k);
+    double hm = pow(440.0 / f0, p->hammer_pitch_m);
+    s->ham_m     = p->hammer_mass * hm;
+    s->ham_K0    = p->hammer_stiffness * hk;   /* base; strike scales by velocity */
+    s->ham_K     = s->ham_K0;
     s->ham_p     = p->hammer_exponent;
     s->ham_vhard = p->hammer_vel_hardness;
     s->g_inj     = p->injection;

@@ -39,9 +39,13 @@ typedef struct {
      * partials with a node there (n = 1/pos, 2/pos, ...). 0 = no comb. */
     double strike_pos;
 
-    /* Nonlinear felt hammer */
-    double hammer_mass;          /* kg-ish */
-    double hammer_stiffness;     /* K in F = K*delta^p (at the reference velocity) */
+    /* Nonlinear felt hammer (graduated across the keyboard, like a real piano:
+     * soft/heavy in the bass, hard/light in the treble, so every note gets a
+     * rich harmonic strike instead of a buzzy bass + dull-sine treble) */
+    double hammer_mass;          /* kg-ish, at A4 */
+    double hammer_stiffness;     /* K in F = K*delta^p, at A4 */
+    double hammer_pitch_k;       /* stiffness scales (f0/440)^this (treble harder) */
+    double hammer_pitch_m;       /* mass scales (440/f0)^this (treble lighter) */
     double hammer_exponent;      /* p, felt hardening (~2..3) */
     double hammer_vmax;          /* hammer launch velocity at velocity==1 */
     double hammer_vel_hardness;  /* how strongly strike velocity stiffens the felt:

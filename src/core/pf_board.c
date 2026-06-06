@@ -185,9 +185,9 @@ void pf_board_stereo_init(pf_board_stereo *b, const pf_board_params *p, double s
     /* Voicing EQ (soundboard radiation response), fit to the measured Salamander/
      * maestro LTAS: cut the boomy low end, push up the 500-2000 Hz presence so the
      * radiated spectrum peaks in the midrange like a real grand, not in the bass. */
-    biquad(0, 250.0, -7.0,  1.0, sample_rate,                       /* low-shelf cut */
+    biquad(0, 320.0, -8.0,  1.0, sample_rate,                       /* low-shelf: tame boom */
            &b->eq_b0[0], &b->eq_b1[0], &b->eq_b2[0], &b->eq_a1[0], &b->eq_a2[0]);
-    biquad(2, 900.0, 13.0,  0.7, sample_rate,                       /* presence peak */
+    biquad(2, 700.0, 13.0,  0.7, sample_rate,                       /* soundboard presence peak */
            &b->eq_b0[1], &b->eq_b1[1], &b->eq_b2[1], &b->eq_a1[1], &b->eq_a2[1]);
     for (int i = 0; i < 2; i++) b->eq_x1[i] = b->eq_x2[i] = b->eq_y1[i] = b->eq_y2[i] = 0.0;
 }
