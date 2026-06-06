@@ -77,6 +77,12 @@ typedef struct {
     int      pl[PF_BOARD_DECORR], pr[PF_BOARD_DECORR];   /* ring write cursors */
     float    bl[PF_BOARD_DECORR][PF_BOARD_DECORR_MAXD];
     float    br[PF_BOARD_DECORR][PF_BOARD_DECORR_MAXD];
+
+    /* Voicing EQ on the mono input: the soundboard's radiation response. Two
+     * biquads (a low-shelf cut + a mid/presence peak) fit so the radiated
+     * spectrum matches a real grand's (which peaks ~600 Hz, not in the bass). */
+    double   eq_b0[2], eq_b1[2], eq_b2[2], eq_a1[2], eq_a2[2];
+    double   eq_x1[2], eq_x2[2], eq_y1[2], eq_y2[2];
 } pf_board_stereo;
 
 void pf_board_stereo_init(pf_board_stereo *b, const pf_board_params *p, double sample_rate);

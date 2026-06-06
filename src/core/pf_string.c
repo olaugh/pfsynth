@@ -67,7 +67,8 @@ void pf_string_defaults(pf_string_params *p, double sample_rate)
     p->injection           = 1.0 / (2.0 * 2.0) / sample_rate;
 
     p->output_gain         = 1.0;
-    p->output_pitch        = 0.8;      /* treble makeup, fit to the Salamander balance */
+    p->output_pitch        = 0.4;      /* gentle treble makeup (the voicing EQ now carries
+                                        * most of the register balance; 0.8 was too tinkly) */
 }
 
 /* Build one waveguide loop (delay + fractional tuner + loss + dispersion) tuned

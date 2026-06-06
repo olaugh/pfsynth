@@ -81,7 +81,7 @@ static void vals_from_defaults(void)
     g_vals[P_INJ]     = p.injection;
     g_vals[P_BODY]    = 0.8;      /* matches pf_board_defaults mix */
     g_vals[P_REVERB]  = 0.30;     /* matches pf_reverb_init wet */
-    g_vals[P_MASTER]  = 500.0;    /* lower than before: the richer body lifts level */
+    g_vals[P_MASTER]  = 110.0;    /* low enough that dense polyphony doesn't clip the tanh */
 }
 
 static void apply_params(pf_engine *e)

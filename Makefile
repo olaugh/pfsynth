@@ -60,6 +60,13 @@ $(ANALYZE): src/host/analyze.c | $(BUILD)
 analyze: $(ANALYZE)
 	@echo "run with: ./$(ANALYZE) <file.wav> <midi-note>"
 
+# Offline MIDI -> WAV through the full engine (reproduces live playback exactly).
+MR_SRC := src/core/pf_string.c src/core/pf_board.c src/core/pf_reverb.c \
+          src/host/midi.c src/host/engine.c src/host/wav.c src/host/midirender.c
+midirender: $(MR_SRC) | $(BUILD)
+	$(CC) $(CFLAGS) $(MR_SRC) -o $(BUILD)/pfsynth-midirender $(LDLIBS)
+	@echo "run with: ./$(BUILD)/pfsynth-midirender <file.mid> <out.wav> [secs] [master]"
+
 $(BUILD):
 	mkdir -p $(BUILD)
 

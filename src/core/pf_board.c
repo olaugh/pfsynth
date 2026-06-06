@@ -120,6 +120,37 @@ void pf_board_process(pf_board *b, float *buf, int n)
 
 /* ---------------- stereo body ---------------- */
 
+/* RBJ biquad coefficients (a0-normalized). type: 0 low-shelf, 1 high-shelf,
+ * 2 peaking. db = gain, Q used for peaking (shelves use S=1). */
+static void biquad(int type, double f0, double db, double Q, double fs,
+                   double *b0o, double *b1o, double *b2o, double *a1o, double *a2o)
+{
+    double A  = pow(10.0, db / 40.0);
+    double w0 = 2.0 * M_PI * f0 / fs, cw = cos(w0), sw = sin(w0);
+    double alpha = (type < 2) ? sw * 0.5 * 1.41421356 : sw / (2.0 * Q);
+    double sa = 2.0 * sqrt(A) * alpha;
+    double b0, b1, b2, a0, a1, a2;
+    if (type == 2) {                                   /* peaking */
+        b0 = 1 + alpha * A; b1 = -2 * cw; b2 = 1 - alpha * A;
+        a0 = 1 + alpha / A; a1 = -2 * cw; a2 = 1 - alpha / A;
+    } else if (type == 0) {                            /* low shelf */
+        b0 =     A * ((A + 1) - (A - 1) * cw + sa);
+        b1 = 2 * A * ((A - 1) - (A + 1) * cw);
+        b2 =     A * ((A + 1) - (A - 1) * cw - sa);
+        a0 =         (A + 1) + (A - 1) * cw + sa;
+        a1 =    -2 * ((A - 1) + (A + 1) * cw);
+        a2 =         (A + 1) + (A - 1) * cw - sa;
+    } else {                                           /* high shelf */
+        b0 =      A * ((A + 1) + (A - 1) * cw + sa);
+        b1 = -2 * A * ((A - 1) + (A + 1) * cw);
+        b2 =      A * ((A + 1) + (A - 1) * cw - sa);
+        a0 =          (A + 1) - (A - 1) * cw + sa;
+        a1 =      2 * ((A - 1) - (A + 1) * cw);
+        a2 =          (A + 1) - (A - 1) * cw - sa;
+    }
+    *b0o = b0 / a0; *b1o = b1 / a0; *b2o = b2 / a0; *a1o = a1 / a0; *a2o = a2 / a0;
+}
+
 void pf_board_stereo_init(pf_board_stereo *b, const pf_board_params *p, double sample_rate)
 {
     pf_board_params pm = *p;
@@ -150,6 +181,15 @@ void pf_board_stereo_init(pf_board_stereo *b, const pf_board_params *p, double s
     }
     memset(b->bl, 0, sizeof b->bl);
     memset(b->br, 0, sizeof b->br);
+
+    /* Voicing EQ (soundboard radiation response), fit to the measured Salamander/
+     * maestro LTAS: cut the boomy low end, push up the 500-2000 Hz presence so the
+     * radiated spectrum peaks in the midrange like a real grand, not in the bass. */
+    biquad(0, 250.0, -7.0,  1.0, sample_rate,                       /* low-shelf cut */
+           &b->eq_b0[0], &b->eq_b1[0], &b->eq_b2[0], &b->eq_a1[0], &b->eq_a2[0]);
+    biquad(2, 900.0, 13.0,  0.7, sample_rate,                       /* presence peak */
+           &b->eq_b0[1], &b->eq_b1[1], &b->eq_b2[1], &b->eq_a1[1], &b->eq_a2[1]);
+    for (int i = 0; i < 2; i++) b->eq_x1[i] = b->eq_x2[i] = b->eq_y1[i] = b->eq_y2[i] = 0.0;
 }
 
 void pf_board_stereo_reset(pf_board_stereo *b)
@@ -158,6 +198,7 @@ void pf_board_stereo_reset(pf_board_stereo *b)
     for (int i = 0; i < b->nap; i++) b->pl[i] = b->pr[i] = 0;
     memset(b->bl, 0, sizeof b->bl);
     memset(b->br, 0, sizeof b->br);
+    for (int i = 0; i < 2; i++) b->eq_x1[i] = b->eq_x2[i] = b->eq_y1[i] = b->eq_y2[i] = 0.0;
 }
 
 void pf_board_stereo_set_mix(pf_board_stereo *b, double mix)
@@ -180,6 +221,15 @@ static double schroeder(double x, double g, int D, float *buf, int *pos)
 
 void pf_board_stereo_tick(pf_board_stereo *b, double x, double *outl, double *outr)
 {
+    /* voicing EQ first (shapes the whole radiated tone, dry + body) */
+    for (int i = 0; i < 2; i++) {
+        double y = b->eq_b0[i] * x + b->eq_b1[i] * b->eq_x1[i] + b->eq_b2[i] * b->eq_x2[i]
+                 - b->eq_a1[i] * b->eq_y1[i] - b->eq_a2[i] * b->eq_y2[i];
+        b->eq_x2[i] = b->eq_x1[i]; b->eq_x1[i] = x;
+        b->eq_y2[i] = b->eq_y1[i]; b->eq_y1[i] = y;
+        x = y;
+    }
+
     double dryx = b->dry * x;                       /* centered direct string tone */
     double m    = pf_board_tick(&b->bank, x);       /* mono modal layer (mix applied) */
     double l = m, r = m;
