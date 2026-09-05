@@ -231,3 +231,13 @@ non-swelling body.
 - Keep commits small.
 - When tuning the physical model, verify by rendering and inspecting stats (peak, RMS,
   hammer contact duration, NaN check) — the harness prints these per note.
+
+## Experiments in progress (2026-09)
+
+The FDTD voice above is the *original* synth. Listening preferred a new **physics-informed partial
+model** (`src/core/pf_partial.{h,c}`, fitted patch in `experiments/partial-piano/`, see its README),
+and the current reference to imitate is **Pianoteq 6 "Steinway D Close Mic Classical"** rendered
+as a black box (`tools/ptq_render.py`). Experiment 03 adds an onset component
+(`src/core/pf_attack.{h,c}`: struck soundboard-mode bank + noise burst) and a Pianoteq-fitted
+tonal patch — `experiments/attack-ptq/README.md`. Auditions live in `audition/` (own git repo).
+The live engine/TUI still run the FDTD voice.

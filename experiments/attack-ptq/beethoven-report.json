@@ -1,0 +1,26 @@
+{
+  "score": "experiments/partial-piano/beethoven-score.json",
+  "score_sha256": "dada6ec3dbe2946333b000433a50f138fd0f49784c2629a17a97387436247fe7",
+  "patch_sal_sha256": "0126d7215c377ae48bcd8b9e7c70ca1f47ca032e76bfcee6bf57ce81f46d51b6",
+  "patch_ptq_sha256": "4d81fd003fc4e5ee900fc73705a3fec4d04bf44aee17fcc61695a0401888d1fa",
+  "attack_json_sha256": "27eb3927b7d7f9c5a0d8a890572402f505a0561db3026ef0a0bcce8a992147a4",
+  "pf_attack_c_sha256": "ee9425b947b5479b1bd7313d838699159c76bfe6e3d285e899e720219f429fd2",
+  "pf_partial_c_sha256": "3c89d8d294ea368fbd63931b5551c5bec23042600c7f618f38df71e8de6e48e1",
+  "reference": "Pianoteq 6.7.3 preset \"Steinway D Close Mic Classical\", MIDI: original key releases + CC64, boundary release at cutoff",
+  "clips": [
+    "beethoven-attack",
+    "beethoven-ptq-fit"
+  ],
+  "peak_dbfs": {
+    "beethoven-attack": {
+      "current": -0.9155032481583973,
+      "fitted": -1.305248661277614,
+      "ref": -2.509384101554011
+    },
+    "beethoven-ptq-fit": {
+      "current": -0.9155032481583973,
+      "fitted": -1.0490664586332363,
+      "ref": -2.1194662830549427
+    }
+  }
+}
