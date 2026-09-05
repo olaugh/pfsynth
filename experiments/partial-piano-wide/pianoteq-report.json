@@ -1,0 +1,27 @@
+{
+  "reference": "Pianoteq 6.7.3 \"Steinway D Close Mic Classical\" renders, onset-exact identification",
+  "anchors": [
+    "C1",
+    "F#1",
+    "C2",
+    "F#2",
+    "C3",
+    "F#3",
+    "C4",
+    "F#4",
+    "C5",
+    "F#5",
+    "C6",
+    "F#6",
+    "C7",
+    "F#7",
+    "C8"
+  ],
+  "layers": [
+    6,
+    13
+  ],
+  "patch_bytes": 21240,
+  "compressed_patch_bytes": 9881,
+  "patch_sha256": "b7cde4322b4a3f9d7ab131a0743a6df015ed91c07e15e1be07744350d1c5bf9f"
+}

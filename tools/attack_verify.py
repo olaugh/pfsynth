@@ -5,10 +5,10 @@ from scipy.io import wavfile
 from partial_audition import ROOT, BUILD, OUT, SR, Patch, Voice, name
 from refsrc import sample, REF
 ATT=ROOT/('experiments/attack' if REF=='sal' else 'experiments/attack-ptq')
-TONAL=OUT/'patch.bin' if REF=='sal' else ROOT/'experiments/partial-piano-ptq/patch.bin'
+TONAL=ROOT/('experiments/partial-piano-wide/salamander.bin' if REF=='sal' else 'experiments/partial-piano-wide/pianoteq.bin')
 class APatch(ct.Structure):
     _fields_=[('mode_hz',ct.c_float*64),('mode_t60',ct.c_float*64),('mode_db',ct.c_float*64),('mode_delay_ms',ct.c_float*64),('pulse_ms',ct.c_float),('pulse_cycles',ct.c_float),
-              ('thump_db',(ct.c_float*2)*9),('noise_db',(ct.c_float*2)*9),('noise_ms',(ct.c_float*2)*9),('noise_hz',(ct.c_float*2)*9),('thump_mix',ct.c_float),('noise_mix',ct.c_float)]
+              ('thump_db',(ct.c_float*2)*15),('noise_db',(ct.c_float*2)*15),('noise_ms',(ct.c_float*2)*15),('noise_hz',(ct.c_float*2)*15),('thump_mix',ct.c_float),('noise_mix',ct.c_float)]
 class AVoice(ct.Structure):
     _fields_=[('modes',ct.c_int),('age',ct.c_int),('sr',ct.c_double),('a1',ct.c_double*64),('a2',ct.c_double*64),('g',ct.c_double*64),('y1',ct.c_double*64),('y2',ct.c_double*64),('delay',ct.c_int*64),('plen',ct.c_int*64),('pgain',ct.c_double*64),
               ('noise_gain',ct.c_double),('noise_rate',ct.c_double),('lp_a',ct.c_double),('lp_z1',ct.c_double),('lp_z2',ct.c_double),('rng',ct.c_uint)]
@@ -17,7 +17,7 @@ def load_apatch(thump_mix=None,noise_mix=None):
     for k in ['mode_hz','mode_t60','mode_db','mode_delay_ms']: getattr(p,k)[:]=[float(v) for v in j[k]]
     p.pulse_ms=j['pulse_ms']; p.pulse_cycles=j.get('pulse_cycles',0.0)
     for k in ['thump_db','noise_db','noise_ms','noise_hz']:
-        for a in range(9):
+        for a in range(15):
             for l in range(2): getattr(p,k)[a][l]=float(j[k][a][l])
     p.thump_mix=j.get('thump_mix',1.0) if thump_mix is None else thump_mix; p.noise_mix=j.get('noise_mix',1.0) if noise_mix is None else noise_mix; return p
 def libs():

@@ -15,7 +15,7 @@ typedef struct {
     long          tempo;   /* us per quarter, when type==3 */
 } raw_ev;
 
-#define RAW_TEMPO 3
+#define RAW_TEMPO 255
 
 typedef struct {
     const unsigned char *p, *end;
@@ -120,8 +120,9 @@ static void parse_track(raw_list *L, const unsigned char *body, unsigned long le
             break;
         case 0xb0:                                       /* control change */
             d1 = rd_u8(&r);
-            if (d0 == 64) {                              /* sustain pedal */
-                raw_ev e = { tick, (*order)++, PF_EV_PEDAL, 0, d1, 0 };
+            if (d0 == 64 || d0 == 66 || d0 == 67) {      /* sustain / sostenuto / soft pedal */
+                unsigned char ty = d0 == 64 ? PF_EV_PEDAL : d0 == 66 ? PF_EV_SOSTENUTO : PF_EV_SOFT;
+                raw_ev e = { tick, (*order)++, ty, 0, d1, 0 };
                 raw_push(L, e);
             }
             break;

@@ -11,7 +11,9 @@ def write_midi(path, events, ppq=960, tempo_us=500000):
     for t,st,d1,d2 in events:
         tick=int(round(t*ppq*1e6/tempo_us)); track+=vlq(tick-last)+bytes([st,d1,d2]); last=tick
     track+=b'\x00\xff\x2f\x00'
-    with open(path,'wb') as f:
-        f.write(b'MThd'+struct.pack('>IHHH',6,0,1,ppq)+b'MTrk'+struct.pack('>I',len(track))+track)
+    data=b'MThd'+struct.pack('>IHHH',6,0,1,ppq)+b'MTrk'+struct.pack('>I',len(track))+track
+    if hasattr(path,'write'): path.write(data)
+    else:
+        with open(path,'wb') as f: f.write(data)
 def single_note(path, midi, velocity, hold, tail=3.0):
     write_midi(path,[(0.05,0x90,midi,velocity),(0.05+hold,0x80,midi,0),(0.05+hold+tail,0xB0,123,0)])

@@ -1,0 +1,27 @@
+{
+  "reference": "Salamander Grand Piano V3 (Alexander Holm, CC BY 3.0), experiment-02 identification",
+  "anchors": [
+    "C1",
+    "F#1",
+    "C2",
+    "F#2",
+    "C3",
+    "F#3",
+    "C4",
+    "F#4",
+    "C5",
+    "F#5",
+    "C6",
+    "F#6",
+    "C7",
+    "F#7",
+    "C8"
+  ],
+  "layers": [
+    6,
+    13
+  ],
+  "patch_bytes": 21240,
+  "compressed_patch_bytes": 9957,
+  "patch_sha256": "f06d0b426fe5e76cafb61414eca7ba788ab073c123c92117cd388ed5e4a3045c"
+}

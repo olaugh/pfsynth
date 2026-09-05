@@ -1,0 +1,55 @@
+{
+  "excerpts": [
+    {
+      "id": "pedal-op110",
+      "source": "/Users/john/sources/segno/tools/synth-ab/corpora/asap/Beethoven/Piano_Sonatas/31-1/Kavalerova01.mid",
+      "source_sha256": "5f1d7a5bc5be752a0287e0bb0fdf593d47f70754c124f20a1828e3096ca3155a",
+      "source_start": 342.5,
+      "source_cutoff": 366.33643900000004,
+      "duration": 27,
+      "notes": 98,
+      "cc64": 586,
+      "cc67": 147,
+      "cc66": 1,
+      "state0": {
+        "2": 95,
+        "3": 0,
+        "4": 0
+      },
+      "license": "(n)ASAP Kavalerova01, CC BY-NC-SA 4.0"
+    },
+    {
+      "id": "pedal-andante",
+      "source": "/Users/john/sources/jun04-pfsynth/maestro/midi/maestro-v3.0.0/2018/MIDI-Unprocessed_Chamber6_MID--AUDIO_20_R3_2018_wav--1.midi",
+      "source_sha256": "99e94616348c834d5225f700dc7d3d5996f06d40fbdbb71cd7899e66e6a869ec",
+      "source_start": 490.0,
+      "source_cutoff": 515.0,
+      "duration": 28,
+      "notes": 97,
+      "cc64": 634,
+      "cc67": 161,
+      "cc66": 1,
+      "state0": {
+        "2": 58,
+        "3": 0,
+        "4": 127
+      },
+      "license": "MAESTRO v3.0.0, CC BY-NC-SA 4.0"
+    }
+  ],
+  "pedal_params": {
+    "damp_p_hi": 0.645,
+    "damp_p_lo": 0.472,
+    "damp_curve": 0.95,
+    "damp_rate_lo": 80.0,
+    "damp_rate_hi": 80.0,
+    "damp_floor_db": 45.0,
+    "soft_db": 2.1,
+    "soft_tilt_db": 1.66,
+    "soft_tilt_vel": 0.13,
+    "soft_curve": 1.65,
+    "soft_sustain_db_s": 5.0,
+    "soft_sustain_max_db": 6.0
+  },
+  "pf_partial_c_sha256": "c73b412f9979be9efc8160616cd962f209c39cd0a34b4522e8b9332616956291"
+}

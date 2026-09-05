@@ -11,7 +11,7 @@ from body_audition import align, rms, normalized, spectral_error, spectrum
 ROOT=Path(__file__).resolve().parents[1]
 SR=44100; MODES=64
 TIMES=np.array([0,.015,.04,.09,.2,.45,.9,1.8,3.6,6])
-ANCHORS=np.arange(36,85,6); LAYERS=[6,13]
+ANCHORS=np.arange(24,109,6); LAYERS=[6,13]   # C1..C8; the frozen 9-anchor patch.bin in experiments/partial-piano predates this
 SAMPLES=ROOT/'calib/SalamanderGrandPianoV3_44.1khz16bit/44.1khz16bit'
 OUT=ROOT/'experiments/partial-piano'; BUILD=ROOT/'build/partial-piano'; PUBLIC=ROOT/'audition/public'
 NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
@@ -23,9 +23,12 @@ def sample(m,layer,duration=7):
     if x.ndim==2:x=x.mean(axis=1)
     return align(x,int(duration*SR))[0]
 class Patch(ct.Structure):
-    _fields_=[('tuning',(ct.c_float*2)*9),('envelope',(((ct.c_ubyte*10)*64)*2)*9),('phase',((ct.c_ubyte*64)*2)*9)]
+    _fields_=[('tuning',(ct.c_float*2)*15),('envelope',(((ct.c_ubyte*10)*64)*2)*15),('phase',((ct.c_ubyte*64)*2)*15)]
 class Voice(ct.Structure):
-    _fields_=[('count',ct.c_int),('released',ct.c_int),('age',ct.c_int),('sr',ct.c_double),('release_gain',ct.c_double),('release_rate',ct.c_double),('re',(ct.c_double*2)*64),('im',(ct.c_double*2)*64),('cr',(ct.c_double*2)*64),('ci',(ct.c_double*2)*64),('amplitude',(ct.c_double*10)*64)]
+    _fields_=[('count',ct.c_int),('released',ct.c_int),('age',ct.c_int),('sr',ct.c_double),('release_gain',ct.c_double),('release_rate',ct.c_double),('re',(ct.c_double*2)*64),('im',(ct.c_double*2)*64),('cr',(ct.c_double*2)*64),('ci',(ct.c_double*2)*64),('amplitude',(ct.c_double*10)*64),
+              ('pedal_model',ct.c_int),('key_down',ct.c_int),('pedal_pos',ct.c_double),('engaged',ct.c_double),('p_hi',ct.c_double),('p_lo',ct.c_double),('p_curve',ct.c_double),('drate',ct.c_double*64),('dfac',ct.c_double*64),('damp',ct.c_double*64),('sgrow',ct.c_double),('scap',ct.c_double),('dfloor',ct.c_double)]
+class PedalParams(ct.Structure):
+    _fields_=[(n,ct.c_float) for n in ['damp_p_hi','damp_p_lo','damp_curve','damp_rate_lo','damp_rate_hi','damp_floor_db','soft_db','soft_tilt_db','soft_tilt_vel','soft_curve','soft_sustain_db_s','soft_sustain_max_db']]
 def identify_tuning(x,midi):
     f0=440*2**((midi-69)/12)
     segment=x[int(.08*SR):int(2.8*SR)]
@@ -38,7 +41,14 @@ def identify_tuning(x,midi):
         f=f1*h*np.sqrt((1+B*h*h)/(1+B))
         power=np.interp(f,freqs,spec)
         return -np.mean(np.log(power+spec.max()*1e-5)/np.sqrt(h))
-    fit=optimize.differential_evolution(error,[(-28,28),(-6,-1.6)],seed=midi,popsize=12,maxiter=70,tol=1e-7)
+    # The original bounds are kept below F#6 so the C2..C6 anchors reproduce the frozen patch byte for
+    # byte (differential evolution seeds from the bounds).  Above C6 only 3-6 partials are measurable and
+    # the free search can collapse to B~0 or run away, so log10(B) is bounded around a stiffness law fitted
+    # to Pianoteq, B ~ 0.003 (f0/1047)^1.6, times 0.3..3.
+    bounds=[(-28,28),(-6,-1.6)]
+    if midi>=90:
+        b0=0.003*(f0/1046.5)**1.6; bounds=[(-28,40),(np.log10(b0*0.3),np.log10(b0*3))]
+    fit=optimize.differential_evolution(error,bounds,seed=midi,popsize=12,maxiter=70,tol=1e-7)
     f1=f0*2**(fit.x[0]/1200);B=10**fit.x[1]
     return f1/f0,B
 

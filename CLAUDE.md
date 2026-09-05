@@ -239,5 +239,10 @@ model** (`src/core/pf_partial.{h,c}`, fitted patch in `experiments/partial-piano
 and the current reference to imitate is **Pianoteq 6 "Steinway D Close Mic Classical"** rendered
 as a black box (`tools/ptq_render.py`). Experiment 03 adds an onset component
 (`src/core/pf_attack.{h,c}`: struck soundboard-mode bank + noise burst) and a Pianoteq-fitted
-tonal patch — `experiments/attack-ptq/README.md`. Auditions live in `audition/` (own git repo).
-The live engine/TUI still run the FDTD voice.
+tonal patch — `experiments/attack-ptq/README.md`. Experiment 04 adds a continuous damper (half
+pedaling) and una corda to `pf_partial` (`pf_partial_init2` / `pf_partial_pedal`; the legacy API is
+unchanged) plus raw CC64 / CC66 / CC67 through the loader and engine — `experiments/pedal/README.md`.
+Auditions live in `audition/` (own git repo). The live engine/TUI still run the FDTD voice.
+The **macOS demo app** (`app/`, SwiftPM + SwiftUI, `make app`) is the first host of the partial
+model: `src/host/pfplayer.c` (portable polyphonic sequencer for pf_partial + pf_attack + pedal model),
+piano-roll playback, curated MAESTRO/ASAP pieces, MP3/M4A/MP4 export — see `app/README.md`.

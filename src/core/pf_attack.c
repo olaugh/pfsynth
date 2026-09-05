@@ -13,7 +13,7 @@ static double table(const float t[PF_ATTACK_ANCHORS][PF_ATTACK_LAYERS],double ke
 void pf_attack_init(pf_attack *v,const pf_attack_patch *p,double sr,double midi,double velocity)
 {
     memset(v,0,sizeof *v);v->sr=sr;
-    double key=(midi-36)/6;if(key<0)key=0;if(key>PF_ATTACK_ANCHORS-1)key=PF_ATTACK_ANCHORS-1;
+    double key=(midi-24)/6;if(key<0)key=0;if(key>PF_ATTACK_ANCHORS-1)key=PF_ATTACK_ANCHORS-1;
     /* Layers sit at MIDI velocities 48 and 100.  Interpolate/extrapolate the dB tables
      * linearly in MIDI velocity: Pianoteq's thump level follows that within ~1 dB from
      * v30 to v120 (log-velocity interpolation overshoots by ~2 dB around v75). */

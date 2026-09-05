@@ -31,7 +31,11 @@ def beethoven(score_json,out_wav):
     for p in d['pedal_events']:
         if p['time']<cut: ev.append((p['time'],0xB0,64,p['value']))
     ev.append((cut,0xB0,64,0)); ev.append((dur-0.01,0xB0,123,0))
-    mid=Path(out_wav).with_suffix('.mid'); write_midi(mid,ev); run_ptq(mid,out_wav)
+    # Pianoteq renders are not bit-deterministic: keep a cached render as long as the MIDI is unchanged.
+    mid=Path(out_wav).with_suffix('.mid'); import io
+    buf=io.BytesIO(); write_midi(buf,ev); new=buf.getvalue()
+    if not (Path(out_wav).exists() and mid.exists() and mid.read_bytes()==new):
+        mid.write_bytes(new); run_ptq(mid,out_wav)
     x=load_mono(out_wav); total=int(dur*SR); x=np.pad(x[:total],(0,max(0,total-len(x)))); return x
 if __name__=='__main__':
     import sys

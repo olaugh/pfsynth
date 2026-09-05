@@ -15,7 +15,7 @@ from body_audition import rms
 import attack_verify as av
 import ptq_render
 SCORE=ROOT/'experiments/partial-piano/beethoven-score.json'; PUBLIC=ROOT/'audition/public'; ATT=ROOT/'experiments/attack-ptq'
-PATCH_SAL=ROOT/'experiments/partial-piano/patch.bin'; PATCH_PTQ=ROOT/'experiments/partial-piano-ptq/patch.bin'
+PATCH_SAL=ROOT/'experiments/partial-piano-wide/salamander.bin'; PATCH_PTQ=ROOT/'experiments/partial-piano-wide/pianoteq.bin'
 
 def render_passage(lib,patch,apatch,notes,total,attack):
     music=np.zeros(total)

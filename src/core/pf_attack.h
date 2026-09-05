@@ -26,7 +26,7 @@
 #ifndef PF_ATTACK_H
 #define PF_ATTACK_H
 #define PF_ATTACK_MODES 64   /* slow room modes + fast soundboard "knock" modes, one bank */
-#define PF_ATTACK_ANCHORS 9   /* C2..C6 every 6 semitones, same grid as pf_partial */
+#define PF_ATTACK_ANCHORS 15  /* C1..C8 every 6 semitones, same grid as pf_partial */
 #define PF_ATTACK_LAYERS 2    /* Salamander layers 6 (vel 48) and 13 (vel 100) */
 typedef struct {
     float mode_hz[PF_ATTACK_MODES];

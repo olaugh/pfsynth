@@ -3,7 +3,8 @@
  * Parses SMF format 0/1 (the maestro set is format 1, 480 PPQN), merges all
  * tracks, applies the tempo map, and flattens everything into a single array of
  * timed events in seconds. Only the messages the piano cares about survive:
- * note on, note off, and the sustain pedal (CC64).
+ * note on, note off, and the pedals: sustain (CC64, raw 0..127 so half pedaling
+ * survives), sostenuto (CC66) and soft/una corda (CC67).
  */
 #ifndef PF_MIDI_H
 #define PF_MIDI_H
@@ -11,7 +12,9 @@
 enum {
     PF_EV_NOTE_OFF = 0,
     PF_EV_NOTE_ON  = 1,
-    PF_EV_PEDAL    = 2   /* val: >=64 down, <64 up */
+    PF_EV_PEDAL    = 2,  /* sustain, val: raw CC64 0..127 (>=64 = down for binary hosts) */
+    PF_EV_SOSTENUTO= 3,  /* val: raw CC66 */
+    PF_EV_SOFT     = 4   /* val: raw CC67 (una corda depth) */
 };
 
 typedef struct {

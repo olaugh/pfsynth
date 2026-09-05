@@ -10,15 +10,16 @@ on register and velocity:
 Writes experiments/attack/attack.json and patch_attack.h.
 """
 import json, numpy as np
+from pathlib import Path
 from scipy import signal, ndimage
 from partial_audition import SR, name, ROOT, ANCHORS, Patch
 from refsrc import sample, REF
 import attack_verify as av
-ATT=av.ATT; TONAL=av.TONAL; SLOW=28; FAST=32; PULSE_MS=0.5; PULSE_CYCLES=0.5
+ATT=av.ATT; TONAL=av.TONAL; SLOW=24; FAST=40; PULSE_MS=0.5; PULSE_CYCLES=0.5   # 24 slow + 23 midpoints + 17 upper knock modes to 2.8 kHz = 64
 # Passage-level calibration: lone onsets inside the Beethoven passage (velocities 40-77) measured
 # +4 dB at 40-160 Hz against Pianoteq's in-passage thumps after the isolated-note fit; trim the bank.
 PASSAGE_TRIM_DB=-3.0
-FIT=[48,54,60,66,72,78,84]; HOLD=[69,81]
+FIT=[48,54,60,66,72,78,84,90,96,102,108]; HOLD=[69,81,93,105]
 
 def hires(x,a,b,n=1<<18):
     seg=x[int(a*SR):int(b*SR)]; X=np.abs(np.fft.rfft(seg*np.hanning(len(seg)),n)); return np.fft.rfftfreq(n,1/SR),X
@@ -68,6 +69,13 @@ def fit_slow(notes):
     W=np.nanmean(A-np.nanmean(A,axis=1,keepdims=True),axis=0); W-=W.max(); G=np.nanmean(A-W[None,:],axis=1)
     return hz,T60,W,G,D   # pulse coloration is absorbed by the closed-loop energy pass
 
+def write_header(path,j):
+    """C initializer in pf_attack_patch field order: modes (hz, t60, db, delay), pulse_ms, pulse_cycles, tables, mixes."""
+    def cf(v):
+        t=f'{float(v):.6g}'; return t+('f' if ('.' in t or 'e' in t) else '.0f')
+    def arr(a): return '{'+','.join(cf(v) for v in a)+'}'
+    def arr2(a): return '{'+','.join(arr(r) for r in a)+'}'
+    Path(path).write_text('#include "../../src/core/pf_attack.h"\nstatic const pf_attack_patch pf_attack_experiment={\n'+arr(j['mode_hz'])+',\n'+arr(j['mode_t60'])+',\n'+arr(j['mode_db'])+',\n'+arr(j['mode_delay_ms'])+',\n'+cf(j['pulse_ms'])+','+cf(j['pulse_cycles'])+',\n'+arr2(j['thump_db'])+',\n'+arr2(j['noise_db'])+',\n'+arr2(j['noise_ms'])+',\n'+arr2(j['noise_hz'])+',\n'+cf(j['thump_mix'])+','+cf(j['noise_mix'])+'\n};\n')
 def main():
     ATT.mkdir(exist_ok=True)
     notes=[(m,l,sample(m,l,2.5)) for m in FIT for l in (6,13)]; hold=[(m,l,sample(m,l,2.5)) for m in HOLD for l in (6,13)]
@@ -78,13 +86,13 @@ def main():
     lib=av.libs(); patch=Patch.from_buffer_copy(TONAL.read_bytes())
     # Fast "knock" modes at the log-midpoints between consecutive slow modes (never coincident with
     # them), extended above the slow range up to 1 kHz.  The final bank is the union sorted by frequency.
-    hz_f=np.concatenate([np.sqrt(hz_s[:-1]*hz_s[1:]),np.geomspace(hz_s[-1]*1.06,1000,max(4,FAST-(len(hz_s)-1)))])
+    hz_f=np.concatenate([np.sqrt(hz_s[:-1]*hz_s[1:]),np.geomspace(hz_s[-1]*1.06,2800,max(4,64-len(hz_s)-(len(hz_s)-1)))])   # knock content reaches ~2.5 kHz under the top octave
     hz_f=hz_f[(hz_f>=45)]; FASTN=len(hz_f)
     order=np.argsort(np.concatenate([hz_s,hz_f])); nS=len(hz_s)
     def combined(t60_fast,w_fast,w_slow=None):
         hz=np.concatenate([hz_s,hz_f])[order]; t60=np.concatenate([t60_s,[t60_fast]*FASTN])[order]
         db=np.concatenate([w_s if w_slow is None else w_slow,w_fast])[order]; dl=np.concatenate([d_s*1000,np.zeros(FASTN)])[order]; return hz,t60,db,dl
-    edges=np.array([56,70,88,111,140,176,222,280,353,445,561,707,891,1122]); centers=np.sqrt(edges[:-1]*edges[1:])
+    edges=np.array([56,70,88,111,140,176,222,280,353,445,561,707,891,1122,1414,1782,2245,2828]); centers=np.sqrt(edges[:-1]*edges[1:])
     n=int(.5*SR); tonal={}
     for (midi,layer,x) in notes+hold:
         v=av.Voice(); lib.pf_partial_init(v,patch,SR,float(midi),[48/127,100/127][layer==13]); y=np.zeros(n,np.float32); lib.pf_partial_process(v,y.ctypes.data_as(av.ct.POINTER(av.ct.c_float)),n); tonal[(midi,layer)]=y.astype(float)
@@ -131,7 +139,7 @@ def main():
         print(f'energy correction pass {it}: band dB',np.round(corr,1))
     w_slow_c=np.zeros(nS); w_fast_c=np.zeros(FASTN); inv=np.argsort(order); allw=dbc[inv]; w_s[:]=allw[:nS]; w_f=allw[nS:]
     # per anchor/layer excitation table, fitted where measurable, held constant toward the bass
-    thump=np.zeros((9,2))
+    thump=np.zeros((len(ANCHORS),2))
     for a,midi in enumerate(ANCHORS):
         for li,layer in enumerate((6,13)):
             ms=[m for (m,l,_) in notes if l==layer]; src=[g for (m,l,_),g in zip(notes,G) if l==layer]; thump[a,li]=np.interp(midi,ms,src)
@@ -156,7 +164,7 @@ def main():
         peak_db=10*np.log10(np.nansum(band)/frac/wmean+1e-18)
         rows[f'{name(midi)}v{layer}']=dict(inband_floor_db=round(float(10*np.log10(np.nansum(band)+1e-18)),1),bands_db=[None if np.isnan(b) else round(float(10*np.log10(b+1e-18)),1) for b in band],fc=round(float(fc)),t60_ms=round(t60,1),peak_db=round(float(peak_db),1))
         print(f'hiss {name(midi)}v{layer}: bands {rows[f"{name(midi)}v{layer}"]["bands_db"]} fc {fc:.0f} t60 {t60:.0f} ms -> burst peak {peak_db:.1f} dBFS')
-    noise_db=np.zeros((9,2)); noise_ms=np.zeros((9,2)); noise_hz=np.zeros((9,2))
+    noise_db=np.zeros((len(ANCHORS),2)); noise_ms=np.zeros((len(ANCHORS),2)); noise_hz=np.zeros((len(ANCHORS),2))
     for a,midi in enumerate(ANCHORS):
         for li,layer in enumerate((6,13)):
             ms=[m for (m,l,_) in notes if l==layer]; r=[rows[f'{name(m)}v{layer}'] for m in ms]
@@ -172,6 +180,6 @@ def main():
         t=f'{float(v):.6g}'; return t+('f' if ('.' in t or 'e' in t) else '.0f')
     def arr(a): return '{'+','.join(cf(v) for v in a)+'}'
     def arr2(a): return '{'+','.join(arr(r) for r in a)+'}'
-    (ATT/'patch_attack.h').write_text('#include "../../src/core/pf_attack.h"\nstatic const pf_attack_patch pf_attack_experiment={\n'+arr(mode_hz)+',\n'+arr(mode_t60)+',\n'+arr(mode_db)+',\n'+f'{PULSE_MS}f,\n'+arr2(thump)+',\n'+arr2(noise_db)+',\n'+arr2(noise_ms)+',\n'+arr2(noise_hz)+f',\n{10**(PASSAGE_TRIM_DB/20):.4f}f,1.0f\n}};\n')
+    write_header(ATT/'patch_attack.h',j)
     print('thump table dB:',np.round(thump,1).tolist()); print('hiss table dB:',np.round(noise_db,1).tolist()); print('hiss fc:',noise_hz.round().tolist()); print('hiss t60 ms:',noise_ms.round().tolist())
 if __name__=='__main__':main()
