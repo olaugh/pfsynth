@@ -1,0 +1,111 @@
+{
+  "paper": "Simionato, Fasciani & Holm (2024), Physics-informed Differentiable Method for Piano Modeling",
+  "adaptation": "Direct offline identification, quantized modal envelopes, two detuned branches; no LSTM, no sampled attack, no nonlinear hammer solver.",
+  "training_notes": [
+    "C2",
+    "F#2",
+    "C3",
+    "F#3",
+    "C4",
+    "F#4",
+    "C5",
+    "F#5",
+    "C6"
+  ],
+  "training_layers": [
+    6,
+    13
+  ],
+  "held_out_notes": [
+    "A2",
+    "A3",
+    "A4",
+    "A5"
+  ],
+  "patch_bytes": 12744,
+  "compressed_patch_bytes": 6821,
+  "metrics": [
+    {
+      "id": "A2-v6",
+      "current": 12.831252327873816,
+      "candidate": 5.47449777859713,
+      "current_energy_weighted_db": 4.534493877342831,
+      "fitted_energy_weighted_db": 2.0712837839543874
+    },
+    {
+      "id": "A2-v13",
+      "current": 14.385030509235241,
+      "candidate": 5.8613586333653185,
+      "current_energy_weighted_db": 5.287661319234945,
+      "fitted_energy_weighted_db": 2.33032828375281
+    },
+    {
+      "id": "A3-v6",
+      "current": 16.07683940542172,
+      "candidate": 17.341133705102386,
+      "current_energy_weighted_db": 8.729581332408628,
+      "fitted_energy_weighted_db": 11.9026282826251
+    },
+    {
+      "id": "A3-v13",
+      "current": 16.708593943972684,
+      "candidate": 17.99358838833922,
+      "current_energy_weighted_db": 10.689722869999208,
+      "fitted_energy_weighted_db": 14.275823295340752
+    },
+    {
+      "id": "A4-v6",
+      "current": 5.474734148939628,
+      "candidate": 22.07665448130205,
+      "current_energy_weighted_db": 2.0589646629628104,
+      "fitted_energy_weighted_db": 7.572477888883663
+    },
+    {
+      "id": "A4-v13",
+      "current": 5.71277176206885,
+      "candidate": 23.357493015995754,
+      "current_energy_weighted_db": 2.8738447139286127,
+      "fitted_energy_weighted_db": 10.651317178773798
+    },
+    {
+      "id": "A5-v6",
+      "current": 6.636527481740094,
+      "candidate": 38.12400809410742,
+      "current_energy_weighted_db": 3.9558100416113713,
+      "fitted_energy_weighted_db": 23.651580782691752
+    },
+    {
+      "id": "A5-v13",
+      "current": 7.490255420422714,
+      "candidate": 30.933696479486002,
+      "current_energy_weighted_db": 6.214180978215266,
+      "fitted_energy_weighted_db": 16.973158975613178
+    }
+  ],
+  "mean_current": 10.664500624959343,
+  "mean_candidate": 20.145303822036908,
+  "sample_hashes": {
+    "C2v6.wav": "63ce40f13f8664e81ac1e82732fbe00a50a0f4b7f43c019dd1b6465915f42f64",
+    "C2v13.wav": "5e5e199084ead2c015d3603dfa3d2a013c267e50042815b50a324c815fe1719c",
+    "F#2v6.wav": "aaec041587b099af59c4bf058ff4cfaf8d9c79b1e7a57dbac855d5013ed1498e",
+    "F#2v13.wav": "0732d06bc83462c8a46bb2cb84e70b9366295e95ea5f68eabf99e93b753af9f7",
+    "C3v6.wav": "1b234c209c8fc7909aca08f110ef4a534f032a63953b66d3f0f047a615b0f3ae",
+    "C3v13.wav": "0cee95aa2bedfb49e093c6c64d1454dd91eb126af70921a5d3ed91db2d196c12",
+    "F#3v6.wav": "9462b72c760fea7bf539eae3c91683e68326c4c3f1d276c9f2f1c9735508ec95",
+    "F#3v13.wav": "1f590e48f8579612a6fd4ccdff5c078138263005a42f8ae60f271105d9418336",
+    "C4v6.wav": "627acbfd5ec8ddba1ab5659d67f20aabbb085fabdff289edb2d838258b60fe27",
+    "C4v13.wav": "db2a96e2770b170538711cb446d532cc6fa9a491b71e30f9933c7028c1d8091b",
+    "F#4v6.wav": "9bc512fe8a9351fd9ae5555e82279eac5ebbad052e5d1651c93d0dbe7cb7765d",
+    "F#4v13.wav": "a121975d0584959e4e6834c533fc252c68769b3c3aec7797e934d7f29e938b69",
+    "C5v6.wav": "099cc2ca1d1955de4901a430ff1ff92c0ff82056d75816447936dc4f80d60865",
+    "C5v13.wav": "71216f067c585f1bce1dc71467c9545b95da094c24d11b08d7002832d10b8289",
+    "F#5v6.wav": "15b0ecddd568fe354361e26c3aa4b87e2017f8494182f2a01442d46e225b0dbe",
+    "F#5v13.wav": "f6146d023ec0d33d111c769fc691ce610f307b6f6691cbf5ced3bb02a05e640b",
+    "C6v6.wav": "e0855c5b1ad158163617811abba24183d3f62ddd937e2c912c39dd0516ae732a",
+    "C6v13.wav": "495b0543e4d6efd49276289046c7784944ac84c7312421aab0ea9a0185a46e12"
+  },
+  "source_hash": "3c89d8d294ea368fbd63931b5551c5bec23042600c7f618f38df71e8de6e48e1",
+  "block_equivalence": true,
+  "energy_weighted_current_db": 5.543032474462959,
+  "energy_weighted_candidate_db": 11.17857480895443
+}

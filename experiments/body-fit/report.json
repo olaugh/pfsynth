@@ -1,0 +1,505 @@
+{
+  "method": "32 fixed-pole parallel sections; one global magnitude correction fitted only to C notes",
+  "sample_rate": 44100,
+  "sections": 32,
+  "coefficient_bytes": 516,
+  "coefficient_zlib_bytes": 527,
+  "max_pole_radius": 0.9993926230302815,
+  "max_c_scipy_difference": 1.4399120118469e-08,
+  "summary": {
+    "fit": {
+      "current": {
+        "overall": 10.27444511961381,
+        "attack": 8.622772627876067,
+        "tail": 34.5578814686042
+      },
+      "fitted": {
+        "overall": 16.516947127352537,
+        "attack": 14.844193605300816,
+        "tail": 35.5339803281975
+      }
+    },
+    "held-out": {
+      "current": {
+        "overall": 10.51770261103861,
+        "attack": 8.167398550599312,
+        "tail": 35.89871160064608
+      },
+      "fitted": {
+        "overall": 17.519799789261356,
+        "attack": 16.015675770178404,
+        "tail": 36.09304759197918
+      }
+    }
+  },
+  "notes": [
+    {
+      "id": "C2-v6",
+      "split": "fit",
+      "note": "C2",
+      "dynamic": "Soft",
+      "current": {
+        "overall": 16.63451262223628,
+        "attack": 13.293907356151554,
+        "tail": 34.00181626420252
+      },
+      "fitted": {
+        "overall": 26.628071080988597,
+        "attack": 23.99804772562211,
+        "tail": 34.29429474375819
+      }
+    },
+    {
+      "id": "C2-v13",
+      "split": "fit",
+      "note": "C2",
+      "dynamic": "Loud",
+      "current": {
+        "overall": 17.325748051178145,
+        "attack": 13.607713259120315,
+        "tail": 34.421371107898565
+      },
+      "fitted": {
+        "overall": 27.931939397032778,
+        "attack": 24.709908078367086,
+        "tail": 34.85053642597155
+      }
+    },
+    {
+      "id": "C3-v6",
+      "split": "fit",
+      "note": "C3",
+      "dynamic": "Soft",
+      "current": {
+        "overall": 7.369067715393831,
+        "attack": 7.680755455922955,
+        "tail": 31.76528257837238
+      },
+      "fitted": {
+        "overall": 11.154051057504415,
+        "attack": 10.053607332616235,
+        "tail": 33.38213383945014
+      }
+    },
+    {
+      "id": "C3-v13",
+      "split": "fit",
+      "note": "C3",
+      "dynamic": "Loud",
+      "current": {
+        "overall": 8.326187512067799,
+        "attack": 7.326383514145665,
+        "tail": 31.34263311353709
+      },
+      "fitted": {
+        "overall": 13.07862483908547,
+        "attack": 9.582039070603882,
+        "tail": 32.882863577756844
+      }
+    },
+    {
+      "id": "C4-v6",
+      "split": "fit",
+      "note": "C4",
+      "dynamic": "Soft",
+      "current": {
+        "overall": 7.716113058713663,
+        "attack": 6.949160248560458,
+        "tail": 36.04177554390709
+      },
+      "fitted": {
+        "overall": 10.600520870297093,
+        "attack": 8.56927655514718,
+        "tail": 37.3691729419696
+      }
+    },
+    {
+      "id": "C4-v13",
+      "split": "fit",
+      "note": "C4",
+      "dynamic": "Loud",
+      "current": {
+        "overall": 7.417521664328988,
+        "attack": 7.082808835856246,
+        "tail": 32.52752408043416
+      },
+      "fitted": {
+        "overall": 9.654614774619748,
+        "attack": 7.941056868335088,
+        "tail": 33.65076073870911
+      }
+    },
+    {
+      "id": "C5-v6",
+      "split": "fit",
+      "note": "C5",
+      "dynamic": "Soft",
+      "current": {
+        "overall": 7.673423008788223,
+        "attack": 6.352794619709121,
+        "tail": 36.99597412453508
+      },
+      "fitted": {
+        "overall": 10.67290093464102,
+        "attack": 9.572232766407176,
+        "tail": 37.999620180055764
+      }
+    },
+    {
+      "id": "C5-v13",
+      "split": "fit",
+      "note": "C5",
+      "dynamic": "Loud",
+      "current": {
+        "overall": 6.6797669826994355,
+        "attack": 6.067774064461401,
+        "tail": 33.33760414344628
+      },
+      "fitted": {
+        "overall": 10.84836189865334,
+        "attack": 10.697134243254581,
+        "tail": 34.446175632186964
+      }
+    },
+    {
+      "id": "C6-v6",
+      "split": "fit",
+      "note": "C6",
+      "dynamic": "Soft",
+      "current": {
+        "overall": 12.310382831751538,
+        "attack": 9.10573322093445,
+        "tail": 42.72362645392801
+      },
+      "fitted": {
+        "overall": 22.847649367362475,
+        "attack": 21.859339679261314,
+        "tail": 43.38240760392377
+      }
+    },
+    {
+      "id": "C6-v13",
+      "split": "fit",
+      "note": "C6",
+      "dynamic": "Loud",
+      "current": {
+        "overall": 11.291727748980195,
+        "attack": 8.760695703898508,
+        "tail": 32.42120727578083
+      },
+      "fitted": {
+        "overall": 21.75273705334045,
+        "attack": 21.459293733393533,
+        "tail": 33.08183759819316
+      }
+    },
+    {
+      "id": "A2-v6",
+      "split": "held-out",
+      "note": "A2",
+      "dynamic": "Soft",
+      "current": {
+        "overall": 12.831252327873816,
+        "attack": 9.644871984152058,
+        "tail": 35.290565243478426
+      },
+      "fitted": {
+        "overall": 15.964151848865109,
+        "attack": 13.158501108251786,
+        "tail": 35.88045578437482
+      }
+    },
+    {
+      "id": "A2-v13",
+      "split": "held-out",
+      "note": "A2",
+      "dynamic": "Loud",
+      "current": {
+        "overall": 14.385030509235241,
+        "attack": 10.798117866710843,
+        "tail": 35.90458266409501
+      },
+      "fitted": {
+        "overall": 18.54089989120678,
+        "attack": 15.227122823724333,
+        "tail": 36.50724673724178
+      }
+    },
+    {
+      "id": "A3-v6",
+      "split": "held-out",
+      "note": "A3",
+      "dynamic": "Soft",
+      "current": {
+        "overall": 16.07683940542172,
+        "attack": 10.708817292875352,
+        "tail": 43.17458560157992
+      },
+      "fitted": {
+        "overall": 14.388271650208097,
+        "attack": 11.066032431451847,
+        "tail": 42.65738122177176
+      }
+    },
+    {
+      "id": "A3-v13",
+      "split": "held-out",
+      "note": "A3",
+      "dynamic": "Loud",
+      "current": {
+        "overall": 16.708593943972684,
+        "attack": 11.321261639301754,
+        "tail": 39.15080234054842
+      },
+      "fitted": {
+        "overall": 15.441748280101036,
+        "attack": 11.249267764450156,
+        "tail": 38.60859675971384
+      }
+    },
+    {
+      "id": "A4-v6",
+      "split": "held-out",
+      "note": "A4",
+      "dynamic": "Soft",
+      "current": {
+        "overall": 5.474734148939628,
+        "attack": 5.411754543106143,
+        "tail": 32.992473393290055
+      },
+      "fitted": {
+        "overall": 11.033244653783857,
+        "attack": 9.227335111463102,
+        "tail": 33.473089783297425
+      }
+    },
+    {
+      "id": "A4-v13",
+      "split": "held-out",
+      "note": "A4",
+      "dynamic": "Loud",
+      "current": {
+        "overall": 5.71277176206885,
+        "attack": 5.50302321511698,
+        "tail": 30.30222830598566
+      },
+      "fitted": {
+        "overall": 10.731139104537771,
+        "attack": 9.561951857770035,
+        "tail": 30.740505190638583
+      }
+    },
+    {
+      "id": "A5-v6",
+      "split": "held-out",
+      "note": "A5",
+      "dynamic": "Soft",
+      "current": {
+        "overall": 6.636527481740094,
+        "attack": 6.074553459807642,
+        "tail": 37.65080514562258
+      },
+      "fitted": {
+        "overall": 19.39706874474459,
+        "attack": 18.11585461411511,
+        "tail": 38.107368921359864
+      }
+    },
+    {
+      "id": "A5-v13",
+      "split": "held-out",
+      "note": "A5",
+      "dynamic": "Loud",
+      "current": {
+        "overall": 7.490255420422714,
+        "attack": 6.2664552483016704,
+        "tail": 32.73765989203031
+      },
+      "fitted": {
+        "overall": 18.63868986365442,
+        "attack": 18.320056070917595,
+        "tail": 33.08895216253666
+      }
+    },
+    {
+      "id": "A6-v6",
+      "split": "held-out",
+      "note": "A6",
+      "dynamic": "Soft",
+      "current": {
+        "overall": 9.725208083323444,
+        "attack": 7.635035849647609,
+        "tail": 40.894688382646066
+      },
+      "fitted": {
+        "overall": 26.041535981320614,
+        "attack": 27.020969723961464,
+        "tail": 40.92812096648412
+      }
+    },
+    {
+      "id": "A6-v13",
+      "split": "held-out",
+      "note": "A6",
+      "dynamic": "Loud",
+      "current": {
+        "overall": 10.135813027387911,
+        "attack": 8.310094406973072,
+        "tail": 30.888725037184386
+      },
+      "fitted": {
+        "overall": 25.021247874191296,
+        "attack": 27.2096661956786,
+        "tail": 30.93875839237292
+      }
+    }
+  ],
+  "source_hashes": {
+    "src/core/pf_string.c": "f150735303ff49ccb216c089426006c60b7e8f504ae7af774e9f150fbebda6e2",
+    "src/core/pf_string.h": "8bf20d14db1670b4bbfa0812dcb13be0b66384892f5b1360d0b102d09dd1de66",
+    "src/core/pf_board.c": "fd476fb16f4368caaf6daaeec0eaeab82f13edf12fe3452efe440b20cec57fb9",
+    "src/core/pf_board.h": "3c54a72abb8db8c940ccc14c69df15e7bd7cac5b549ceac84fb5440ea6dd20f7"
+  },
+  "references": [
+    {
+      "id": "C2-v6",
+      "split": "fit",
+      "velocity": 0.3779527559055118,
+      "source_hash": "63ce40f13f8664e81ac1e82732fbe00a50a0f4b7f43c019dd1b6465915f42f64",
+      "onset_offset_samples": 104
+    },
+    {
+      "id": "C2-v13",
+      "split": "fit",
+      "velocity": 0.7874015748031497,
+      "source_hash": "5e5e199084ead2c015d3603dfa3d2a013c267e50042815b50a324c815fe1719c",
+      "onset_offset_samples": 19
+    },
+    {
+      "id": "C3-v6",
+      "split": "fit",
+      "velocity": 0.3779527559055118,
+      "source_hash": "1b234c209c8fc7909aca08f110ef4a534f032a63953b66d3f0f047a615b0f3ae",
+      "onset_offset_samples": 352
+    },
+    {
+      "id": "C3-v13",
+      "split": "fit",
+      "velocity": 0.7874015748031497,
+      "source_hash": "0cee95aa2bedfb49e093c6c64d1454dd91eb126af70921a5d3ed91db2d196c12",
+      "onset_offset_samples": 299
+    },
+    {
+      "id": "C4-v6",
+      "split": "fit",
+      "velocity": 0.3779527559055118,
+      "source_hash": "627acbfd5ec8ddba1ab5659d67f20aabbb085fabdff289edb2d838258b60fe27",
+      "onset_offset_samples": 224
+    },
+    {
+      "id": "C4-v13",
+      "split": "fit",
+      "velocity": 0.7874015748031497,
+      "source_hash": "db2a96e2770b170538711cb446d532cc6fa9a491b71e30f9933c7028c1d8091b",
+      "onset_offset_samples": 218
+    },
+    {
+      "id": "C5-v6",
+      "split": "fit",
+      "velocity": 0.3779527559055118,
+      "source_hash": "099cc2ca1d1955de4901a430ff1ff92c0ff82056d75816447936dc4f80d60865",
+      "onset_offset_samples": 38
+    },
+    {
+      "id": "C5-v13",
+      "split": "fit",
+      "velocity": 0.7874015748031497,
+      "source_hash": "71216f067c585f1bce1dc71467c9545b95da094c24d11b08d7002832d10b8289",
+      "onset_offset_samples": 126
+    },
+    {
+      "id": "C6-v6",
+      "split": "fit",
+      "velocity": 0.3779527559055118,
+      "source_hash": "e0855c5b1ad158163617811abba24183d3f62ddd937e2c912c39dd0516ae732a",
+      "onset_offset_samples": 403
+    },
+    {
+      "id": "C6-v13",
+      "split": "fit",
+      "velocity": 0.7874015748031497,
+      "source_hash": "495b0543e4d6efd49276289046c7784944ac84c7312421aab0ea9a0185a46e12",
+      "onset_offset_samples": 310
+    },
+    {
+      "id": "A2-v6",
+      "split": "held-out",
+      "velocity": 0.3779527559055118,
+      "source_hash": "e27fefa61af3f973782cf88a32e85161e71a54d0bdfa37f2bdecab535d28c3aa",
+      "onset_offset_samples": 108
+    },
+    {
+      "id": "A2-v13",
+      "split": "held-out",
+      "velocity": 0.7874015748031497,
+      "source_hash": "e87ec0e3f58123a4d43f1208d57670db7619b68f09ee482bbcef9884124e3793",
+      "onset_offset_samples": 116
+    },
+    {
+      "id": "A3-v6",
+      "split": "held-out",
+      "velocity": 0.3779527559055118,
+      "source_hash": "0ee76f0e2da38e4e7ba9732cbdea46a3302aa101c8958dabbfb366c68d3fec15",
+      "onset_offset_samples": 203
+    },
+    {
+      "id": "A3-v13",
+      "split": "held-out",
+      "velocity": 0.7874015748031497,
+      "source_hash": "03a0bb9076b34f90ebac056ac0291534d0a65487d00ed9114fd667ec94d6343b",
+      "onset_offset_samples": 169
+    },
+    {
+      "id": "A4-v6",
+      "split": "held-out",
+      "velocity": 0.3779527559055118,
+      "source_hash": "471f3c3e09ad15047f71cf56955256d5ce2a09810b3eac578a509e37c52fb8ff",
+      "onset_offset_samples": 305
+    },
+    {
+      "id": "A4-v13",
+      "split": "held-out",
+      "velocity": 0.7874015748031497,
+      "source_hash": "2db5f94e4fe90a0f74d875b83d6e7d5dc64e0b9077c0d55ba10afd918655984c",
+      "onset_offset_samples": 220
+    },
+    {
+      "id": "A5-v6",
+      "split": "held-out",
+      "velocity": 0.3779527559055118,
+      "source_hash": "f53e4960cdbe7c2535bacc7baad0471a7a444b82597ef604e681b72a7acec53d",
+      "onset_offset_samples": 689
+    },
+    {
+      "id": "A5-v13",
+      "split": "held-out",
+      "velocity": 0.7874015748031497,
+      "source_hash": "e990df46216ef7b8c6fef0c9f755ac29ea6709819dc3bbd31f887b25a1c5491e",
+      "onset_offset_samples": 367
+    },
+    {
+      "id": "A6-v6",
+      "split": "held-out",
+      "velocity": 0.3779527559055118,
+      "source_hash": "6125b2b23a728bf2ae27be939ef2c93d365e7179f1974ba4a4c33a5c787adfe6",
+      "onset_offset_samples": 240
+    },
+    {
+      "id": "A6-v13",
+      "split": "held-out",
+      "velocity": 0.7874015748031497,
+      "source_hash": "052b8068308fea703cb16ed6de2f6b61a972071743a45053629399b25e846299",
+      "onset_offset_samples": 299
+    }
+  ]
+}
