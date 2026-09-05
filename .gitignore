@@ -1,11 +1,13 @@
-build/
-out.wav
-out_dry.wav
-calib/
-*.o
-maestro/
 *.dSYM/
-experiments/*/*.wav
-tools/__pycache__/
+*.o
 # nested git repository (audition site) with its own history
+app/PfsynthDemo.app/
+app/PfsynthDemo/.build/
 audition/
+build/
+calib/
+experiments/*/*.wav
+maestro/
+out_dry.wav
+out.wav
+tools/__pycache__/
