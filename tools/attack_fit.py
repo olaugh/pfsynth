@@ -67,7 +67,7 @@ def fit_slow(notes):
         D[k]=float(np.clip(np.median(peaks)-.002,0,.03)) if peaks else 0.0
         for i,p in lines: A[i,k]=np.polyval(p,D[k]+onsets[i]/SR)  # amplitude at the strike moment
     W=np.nanmean(A-np.nanmean(A,axis=1,keepdims=True),axis=0); W-=W.max(); G=np.nanmean(A-W[None,:],axis=1)
-    return hz,T60,W,G,D   # pulse coloration is absorbed by the closed-loop energy pass
+    return hz,T60,W,G,D,A   # pulse coloration is absorbed by the closed-loop energy pass; A = per-note mode amplitudes (dB, NaN where unobservable)
 
 def write_header(path,j):
     """C initializer in pf_attack_patch field order: modes (hz, t60, db, delay), pulse_ms, pulse_cycles, tables, mixes."""
@@ -75,11 +75,12 @@ def write_header(path,j):
         t=f'{float(v):.6g}'; return t+('f' if ('.' in t or 'e' in t) else '.0f')
     def arr(a): return '{'+','.join(cf(v) for v in a)+'}'
     def arr2(a): return '{'+','.join(arr(r) for r in a)+'}'
-    Path(path).write_text('#include "../../src/core/pf_attack.h"\nstatic const pf_attack_patch pf_attack_experiment={\n'+arr(j['mode_hz'])+',\n'+arr(j['mode_t60'])+',\n'+arr(j['mode_db'])+',\n'+arr(j['mode_delay_ms'])+',\n'+cf(j['pulse_ms'])+','+cf(j['pulse_cycles'])+',\n'+arr2(j['thump_db'])+',\n'+arr2(j['noise_db'])+',\n'+arr2(j['noise_ms'])+',\n'+arr2(j['noise_hz'])+',\n'+cf(j['thump_mix'])+','+cf(j['noise_mix'])+'\n};\n')
+    Path(path).write_text('#include "../../src/core/pf_attack.h"\nstatic const pf_attack_patch pf_attack_experiment={\n'+arr(j['mode_hz'])+',\n'+arr(j['mode_t60'])+',\n'+arr(j['mode_db'])+',\n'+arr(j['mode_delay_ms'])+',\n'+arr2(j.get('mode_db_key',[[0]*64]*30))+',\n'+cf(j['pulse_ms'])+','+cf(j['pulse_cycles'])+',\n'+arr2(j['thump_db'])+',\n'+arr2(j['noise_db'])+',\n'+arr2(j['noise_ms'])+',\n'+arr2(j['noise_hz'])+',\n'+cf(j['thump_mix'])+','+cf(j['noise_mix'])+','+cf(j.get('slow_mix',1.0))+','+cf(j.get('knock_mix',1.0))+'\n};\n')
 def main():
     ATT.mkdir(exist_ok=True)
     notes=[(m,l,sample(m,l,2.5)) for m in FIT for l in (6,13)]; hold=[(m,l,sample(m,l,2.5)) for m in HOLD for l in (6,13)]
-    hz_s,t60_s,w_s,G,d_s=fit_slow(notes)
+    hz_s,t60_s,w_s,G,d_s,A_s=fit_slow(notes)
+    R_slow=np.nan_to_num(A_s-G[:,None]-w_s[None,:])   # per-note residual weights of the slow modes
     print('slow modes:',np.round(hz_s,1)); print('slow T60:',np.round(t60_s,2)); print('slow weights dB:',np.round(w_s,1)); print('slow delays ms:',np.round(d_s*1000,1))
     print('note gains dB:',{f'{name(m)}v{l}':round(float(g),1) for (m,l,_),g in zip(notes,G)})
     # ---- fast knock bank from the early excess (rec - tonal - slow bank), window 0-60 ms
@@ -121,6 +122,10 @@ def main():
         e=float(np.nanmean(err)); print(f'knock T60 {t60_fast}: later-window band error {e:.2f} dB')
         if best is None or e<best[0]: best=(e,t60_fast,wmode,wb)
     _,t60_fast,w_f,wb=best; print('chosen knock T60',t60_fast,'band weights dB:',np.round(wb,1))
+    _,Wf=excess_weights(t60_fast); Rb=np.nan_to_num(Wf-wb[None,:])
+    R_fast=np.array([np.interp(np.log(hz_f),np.log(centers),Rb[i]) for i in range(len(notes))])
+    # per-note offsets on the combined, frequency-sorted bank
+    OFF=np.concatenate([R_slow,R_fast],axis=1)[:,order]
     # ---- closed loop: the reference thump is two-stage (burst, then long quiet tail) and varies +-7 dB
     # per key, so single exponentials through the late slope misplace energy.  Correct every mode so the
     # TOTAL 0-200 ms energy per sub-fundamental band matches the reference on average over the fit notes
@@ -129,7 +134,7 @@ def main():
     for it in range(3):
         rows_=[]
         for i,(midi,layer,x) in enumerate(notes):
-            model=tonal[(midi,layer)]+synth_bank(hzc,tc,dbc,G[i],n,dlc)
+            model=tonal[(midi,layer)]+synth_bank(hzc,tc,dbc+OFF[i],G[i],n,dlc)
             pr,pm=band_power(x,0,.2,edges),band_power(model,0,.2,edges); ok=edges[1:]<.6*f1_of(midi)
             row=np.full(len(centers),np.nan); row[ok]=10*np.log10((pr[ok]+1e-18)/(pm[ok]+1e-18)); rows_.append(row)
         corr=np.nanmean(rows_,axis=0)
@@ -169,9 +174,11 @@ def main():
         for li,layer in enumerate((6,13)):
             ms=[m for (m,l,_) in notes if l==layer]; r=[rows[f'{name(m)}v{layer}'] for m in ms]
             noise_db[a,li]=np.interp(midi,ms,[q['peak_db'] for q in r]); noise_hz[a,li]=np.exp(np.interp(midi,ms,np.log([q['fc'] for q in r]))); noise_ms[a,li]=np.interp(midi,ms,[q['t60_ms'] for q in r])
+    note_midis=sorted(set(m for m,_,_ in notes)); OFFn=np.array([np.mean([OFF[i] for i,(m,l,_) in enumerate(notes) if m==mm],axis=0) for mm in note_midis])
+    mode_db_key=np.array([[np.interp(a,note_midis,OFFn[:,k]) for k in range(OFFn.shape[1])] for a in ANCHORS])
     mode_hz,mode_t60,mode_db,mode_delay=combined(t60_fast,w_f)
-    pad=64-len(mode_hz); assert pad>=0; mode_hz=np.pad(mode_hz,(0,pad)); mode_t60=np.pad(mode_t60,(0,pad),constant_values=1); mode_db=np.pad(mode_db,(0,pad),constant_values=-120); mode_delay=np.pad(mode_delay,(0,pad))
-    j=dict(mode_hz=[round(float(v),2) for v in mode_hz],mode_t60=[round(float(v),3) for v in mode_t60],mode_db=[round(float(v),2) for v in mode_db],mode_delay_ms=[round(float(v),1) for v in mode_delay],pulse_ms=PULSE_MS,pulse_cycles=PULSE_CYCLES,
+    pad=64-len(mode_hz); assert pad>=0; mode_hz=np.pad(mode_hz,(0,pad)); mode_t60=np.pad(mode_t60,(0,pad),constant_values=1); mode_db=np.pad(mode_db,(0,pad),constant_values=-120); mode_delay=np.pad(mode_delay,(0,pad)); mode_db_key=np.pad(mode_db_key,((0,0),(0,pad)))
+    j=dict(mode_hz=[round(float(v),2) for v in mode_hz],mode_t60=[round(float(v),3) for v in mode_t60],mode_db=[round(float(v),2) for v in mode_db],mode_delay_ms=[round(float(v),1) for v in mode_delay],mode_db_key=np.round(mode_db_key,1).tolist(),pulse_ms=PULSE_MS,pulse_cycles=PULSE_CYCLES,
            thump_db=np.round(thump,2).tolist(),noise_db=np.round(noise_db,2).tolist(),noise_ms=np.round(noise_ms,1).tolist(),noise_hz=np.round(noise_hz,0).tolist(),thump_mix=round(10**(PASSAGE_TRIM_DB/20),4),noise_mix=1.0,passage_trim_db=PASSAGE_TRIM_DB,
            slow_modes=len(hz_s),fast_modes=FASTN,fast_hz=[round(float(v),1) for v in hz_f],knock_t60=t60_fast,knock_band_centers=[round(float(c)) for c in centers],knock_band_db=[None if np.isnan(v) else round(float(v),1) for v in wb],
            reference=REF,tonal_patch=str(TONAL.relative_to(ROOT)),fit_notes=[f'{name(m)}v{l}' for m,l,_ in notes],held_out=[f'{name(m)}v{l}' for m,l,_ in hold],per_note_thump_gain_db={f'{name(m)}v{l}':round(float(g),2) for (m,l,_),g in zip(notes,G)},hiss_rows=rows)

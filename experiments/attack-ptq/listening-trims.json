@@ -1,0 +1,6 @@
+{
+ "body_db": -18,
+ "knock_db": -22,
+ "noise_db": -17,
+ "note": "Trims on the fitted onset model chosen by ear in the demo app on 2026-09-05 (Beethoven Op. 2/1, Pianoteq-fitted tone): slow body modes, fast knock modes, noise burst. Applied by tools/attack_verify.load_apatch and as the player/app defaults."
+}

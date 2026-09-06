@@ -1,4 +1,4 @@
-"""Identify pf_partial tonal patches on the C1..C8 anchor grid (15 anchors, every 6 semitones).
+"""Identify pf_partial tonal patches on the A0..C8 anchor grid (30 anchors, every 3 semitones).
 salamander.{bin,h}: Salamander samples with the experiment-02 identification (unchanged code, so the
 C2..C6 anchors reproduce the frozen 9-anchor patch byte for byte). pianoteq.{bin,h}: Pianoteq
 "Steinway D Close Mic Classical" renders with the onset-exact identification from experiment 03."""

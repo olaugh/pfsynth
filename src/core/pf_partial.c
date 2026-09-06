@@ -3,6 +3,14 @@
 #include <string.h>
 static const double times[PF_PARTIAL_POINTS]={0,.015,.04,.09,.2,.45,.9,1.8,3.6,6};
 static double mix(double a,double b,double t){return a+(b-a)*t;}
+/* Pianoteq bass notes reach -3 dB of peak 20-40 ms after onset (A0 42 ms, C2 31, C3 23) while treble
+ * notes are at full level within ~2 ms; a struck bass string builds up over several periods where a
+ * plucked one would not.  22 ms (131 Hz / f1)^0.4 below C3, falling steeply above it. */
+double pf_onset_seconds(double f1)
+{
+    double T=f1<131?.022*pow(131/f1,.4):.004*pow(131/f1,1.2)+.002;
+    if(T<.002)T=.002;if(T>.045)T=.045;return T;
+}
 void pf_pedal_defaults(pf_pedal_params *p)
 {
     /* Fitted to Pianoteq Steinway D Close Mic Classical (experiments/pedal/README.md): the
@@ -53,14 +61,15 @@ void pf_partial_init2(pf_partial *v,const pf_partial_patch *p,double sr,double m
 }
 void pf_partial_init(pf_partial *v,const pf_partial_patch *p,double sr,double midi,double velocity)
 {
-    memset(v,0,sizeof *v);v->sr=sr;v->release_gain=1;
+    memset(v,0,sizeof *v);v->sr=sr;v->release_gain=1;v->seg=-1;v->seg_end=0;
     v->release_rate=exp(-6.907755/(sr*.24));
-    double key=(midi-24)/6; if(key<0)key=0;if(key>PF_PARTIAL_ANCHORS-1)key=PF_PARTIAL_ANCHORS-1;
+    double key=(midi-21)/3; if(key<0)key=0;if(key>PF_PARTIAL_ANCHORS-1)key=PF_PARTIAL_ANCHORS-1;
     int lo=(int)key,hi=lo<PF_PARTIAL_ANCHORS-1?lo+1:lo;double t=key-lo;
     double vel=(velocity*127-48)/52;if(vel<0)vel=0;if(vel>1)vel=1;
     double extra=velocity*127<48?pow(velocity*127/48,1.5):1;
     if(velocity*127>100)extra=pow(velocity*127/100,1.3);
     double f1=440*pow(2,(midi-69)/12)*mix(p->tuning[lo][0],p->tuning[hi][0],t);
+    v->onset_s=pf_onset_seconds(f1);
     double B=exp(mix(log(p->tuning[lo][1]),log(p->tuning[hi][1]),t));
     for(int k=0;k<PF_PARTIAL_MODES;k++){
         double h=k+1,f=f1*h*sqrt((1+B*h*h)/(1+B));if(f>sr*.44)break;v->count=k+1;
@@ -87,13 +96,23 @@ void pf_partial_release(pf_partial *v){if(v->pedal_model){v->key_down=0;pedal_re
 void pf_partial_process(pf_partial *v,float *out,int n)
 {
     for(int i=0;i<n;i++,v->age++){
-        double t=v->age/v->sr;int j=0;while(j<PF_PARTIAL_POINTS-2&&t>times[j+1])j++;
-        double a=(t-times[j])/(times[j+1]-times[j]);if(a<0)a=0;
+        double t=v->age/v->sr;
+        /* Log interpolation between the envelope knots preserves exponential decay.  It is
+         * evaluated incrementally (one multiply per partial per sample, re-anchored at every
+         * knot) instead of a pow() per partial per sample, which was the CPU bottleneck. */
+        if(v->age>=v->seg_end){
+            int j=v->seg+1;if(v->seg<0)j=0;
+            if(j<=PF_PARTIAL_POINTS-2){
+                double len=(times[j+1]-times[j])*v->sr;v->seg=j;v->seg_end=(long)(times[j+1]*v->sr);
+                for(int k=0;k<v->count;k++){double e0=v->amplitude[k][j],e1=v->amplitude[k][j+1];v->cur[k]=e0;v->step[k]=pow(e1/e0,1.0/len);}
+            }else{ /* past the last knot (6 s): keep the last decay rate, or a 1 s time constant if the tail was rising */
+                v->seg=j;v->seg_end=0x7fffffffffffffffL;
+                for(int k=0;k<v->count;k++){double e0=v->amplitude[k][PF_PARTIAL_POINTS-2],e1=v->amplitude[k][PF_PARTIAL_POINTS-1];if(e1>e0){v->cur[k]=e1;v->step[k]=exp(-1.0/v->sr);}}
+            }
+        }
         double sum=0;
         for(int k=0;k<v->count;k++){
-            double e0=v->amplitude[k][j],e1=v->amplitude[k][j+1];
-            /* Log interpolation preserves exponential decay between control points. */
-            double amp=e0*pow(e1/e0,a);if(t>6&&e1>e0)amp=e1*exp(-(t-6));
+            double amp=v->cur[k];v->cur[k]*=v->step[k];
             if(v->pedal_model){
                 amp*=v->damp[k];if(v->damp[k]>v->dfloor)v->damp[k]*=v->dfac[k];
                 if(k<2&&v->damp[k]<v->scap)v->damp[k]*=v->sgrow;   /* una corda fundamental sustain */
@@ -108,7 +127,7 @@ void pf_partial_process(pf_partial *v,float *out,int n)
         }
         if(v->released)v->release_gain*=v->release_rate;
         /* Suppress a discontinuity at voice creation without a synthetic click. */
-        double onset=t<.004?.5-.5*cos(3.141592653589793*t/.004):1;
+        double onset=t<v->onset_s?.5-.5*cos(3.141592653589793*t/v->onset_s):1;
         out[i]+=(float)(sum*v->release_gain*onset);
     }
 }

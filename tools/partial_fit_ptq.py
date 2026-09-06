@@ -15,11 +15,19 @@ def identify_envelopes(x,midi,tuning):
     x=np.concatenate([x[onset:],np.zeros(onset)])
     f1=440*2**((midi-69)/12)*tuning[0];B=tuning[1]
     env=np.zeros((64,10)); phases=np.zeros(64); t=np.arange(len(x))/SR
+    width=max(.012,2.5/f1); win=signal.windows.hann(int(width*SR)|1);win/=win.sum()
+    # Below C3 the demodulation window (20-90 ms) smears the 20-40 ms build-up of a bass note away and the
+    # model starts at the plateau level: a pluck, not a hammer.  Recover the rise from the broadband
+    # envelope: ratio of the 2 ms RMS envelope to the same envelope smoothed with the demod window.
+    rise=None
+    if midi<48:
+        k2=int(.002*SR); fast=np.sqrt(np.convolve(x**2,np.ones(k2)/k2,'same')+1e-18); slow=signal.fftconvolve(fast,win,mode='same')+1e-12
+        rise=np.clip(fast/slow,.02,1.5)
     for k in range(64):
         h=k+1;f=f1*h*np.sqrt((1+B*h*h)/(1+B))
         if f>=SR*.44:continue
-        width=max(.012,2.5/f1); win=signal.windows.hann(int(width*SR)|1);win/=win.sum()
         base=signal.fftconvolve(x*np.exp(-2j*np.pi*f*t),win,mode='same')*2; envelope=np.abs(base)
+        if rise is not None: envelope=envelope*rise
         for j,when in enumerate(TIMES):
             if j==0: lo,hi=0,int(.006*SR)
             else:

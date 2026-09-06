@@ -87,3 +87,13 @@ excitation. Empirically fitted: mode frequencies/decays/weights, per-register le
 Not modelled: hammer-string contact physics, key/action noise as a separate mechanism, sympathetic
 coupling, release noise. The hiss module is retained but likely below audibility. The bass anchors'
 excitation level is an extrapolation. Judge by the Beethoven A/B, not by these band tables.
+
+## Per-key body weights and live trims (2026-09-05)
+
+Pianoteq's body-mode weights change from key to key by +-5..10 dB (e.g. the 65 Hz mode is +8 dB
+under D4-F4 and -7 dB under B4); a single averaged bank plays the same signature on every note.
+`mode_db_key[anchor][mode]` now stores per-anchor offsets on the shared weights, taken from the
+per-note residuals of the rank-1 fit (slow modes) and of the knock band fit (fast modes) and
+interpolated onto the A0..C8 grid. The patch also carries `slow_mix` / `knock_mix` trims; the
+player exposes them with the noise trim as dB offsets (`--body`, `--knock`, `--noise` in the
+demo app's headless mode; sliders in the app), so each component can be tuned or muted by ear.

@@ -7,19 +7,26 @@ from refsrc import sample, REF
 ATT=ROOT/('experiments/attack' if REF=='sal' else 'experiments/attack-ptq')
 TONAL=ROOT/('experiments/partial-piano-wide/salamander.bin' if REF=='sal' else 'experiments/partial-piano-wide/pianoteq.bin')
 class APatch(ct.Structure):
-    _fields_=[('mode_hz',ct.c_float*64),('mode_t60',ct.c_float*64),('mode_db',ct.c_float*64),('mode_delay_ms',ct.c_float*64),('pulse_ms',ct.c_float),('pulse_cycles',ct.c_float),
-              ('thump_db',(ct.c_float*2)*15),('noise_db',(ct.c_float*2)*15),('noise_ms',(ct.c_float*2)*15),('noise_hz',(ct.c_float*2)*15),('thump_mix',ct.c_float),('noise_mix',ct.c_float)]
+    _fields_=[('mode_hz',ct.c_float*64),('mode_t60',ct.c_float*64),('mode_db',ct.c_float*64),('mode_delay_ms',ct.c_float*64),('mode_db_key',(ct.c_float*64)*30),('pulse_ms',ct.c_float),('pulse_cycles',ct.c_float),
+              ('thump_db',(ct.c_float*2)*30),('noise_db',(ct.c_float*2)*30),('noise_ms',(ct.c_float*2)*30),('noise_hz',(ct.c_float*2)*30),('thump_mix',ct.c_float),('noise_mix',ct.c_float),('slow_mix',ct.c_float),('knock_mix',ct.c_float)]
 class AVoice(ct.Structure):
-    _fields_=[('modes',ct.c_int),('age',ct.c_int),('sr',ct.c_double),('a1',ct.c_double*64),('a2',ct.c_double*64),('g',ct.c_double*64),('y1',ct.c_double*64),('y2',ct.c_double*64),('delay',ct.c_int*64),('plen',ct.c_int*64),('pgain',ct.c_double*64),
-              ('noise_gain',ct.c_double),('noise_rate',ct.c_double),('lp_a',ct.c_double),('lp_z1',ct.c_double),('lp_z2',ct.c_double),('rng',ct.c_uint)]
+    _fields_=[('modes',ct.c_int),('age',ct.c_int),('sr',ct.c_double),('a1',ct.c_double*64),('a2',ct.c_double*64),('g',ct.c_double*64),('y1',ct.c_double*64),('y2',ct.c_double*64),('delay',ct.c_int*64),('plen',ct.c_int*64),('pgain',ct.c_double*64),('onset_s',ct.c_double),
+              ('noise_gain',ct.c_double),('noise_rate',ct.c_double),('lp_a',ct.c_double),('lp_z1',ct.c_double),('lp_z2',ct.c_double),('noise_comp',ct.c_double),('rng',ct.c_uint)]
 def load_apatch(thump_mix=None,noise_mix=None):
     j=json.loads((ATT/'attack.json').read_text()); p=APatch()
     for k in ['mode_hz','mode_t60','mode_db','mode_delay_ms']: getattr(p,k)[:]=[float(v) for v in j[k]]
     p.pulse_ms=j['pulse_ms']; p.pulse_cycles=j.get('pulse_cycles',0.0)
+    for a,row in enumerate(j.get('mode_db_key',[])):
+        for k,v in enumerate(row): p.mode_db_key[a][k]=float(v)
     for k in ['thump_db','noise_db','noise_ms','noise_hz']:
-        for a in range(15):
+        for a in range(30):
             for l in range(2): getattr(p,k)[a][l]=float(j[k][a][l])
-    p.thump_mix=j.get('thump_mix',1.0) if thump_mix is None else thump_mix; p.noise_mix=j.get('noise_mix',1.0) if noise_mix is None else noise_mix; return p
+    p.thump_mix=j.get('thump_mix',1.0) if thump_mix is None else thump_mix; p.noise_mix=j.get('noise_mix',1.0) if noise_mix is None else noise_mix; p.slow_mix=j.get('slow_mix',1.0); p.knock_mix=j.get('knock_mix',1.0)
+    tr=ATT/'listening-trims.json'   # ear-chosen trims (same defaults as the app/player) so offline renders match what is auditioned
+    if tr.exists():
+        t=json.loads(tr.read_text()); p.slow_mix*=10**(t.get('body_db',0)/20); p.knock_mix*=10**(t.get('knock_db',0)/20)
+        if noise_mix is None: p.noise_mix*=10**(t.get('noise_db',0)/20)
+    return p
 def libs():
     subprocess.run(['cc','-O3','-std=c99','-dynamiclib','src/core/pf_partial.c','src/core/pf_attack.c','-o',str(BUILD/'partial.dylib')],cwd=ROOT,check=True)
     lib=ct.CDLL(str(BUILD/'partial.dylib'))

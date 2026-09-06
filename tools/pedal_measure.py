@@ -14,7 +14,7 @@ from mkmidi import write_midi
 OUT=ROOT/'experiments/pedal'; OUT.mkdir(exist_ok=True)
 patch=Patch.from_buffer_copy((ROOT/'experiments/partial-piano-wide/pianoteq.bin').read_bytes())
 def tuning(midi):
-    key=min(max((midi-24)/6,0),14); lo=int(key); hi=min(lo+1,14); t=key-lo
+    key=min(max((midi-21)/3,0),29); lo=int(key); hi=min(lo+1,29); t=key-lo
     f1=440*2**((midi-69)/12)*(patch.tuning[lo][0]*(1-t)+patch.tuning[hi][0]*t); B=np.exp(np.log(patch.tuning[lo][1])*(1-t)+np.log(patch.tuning[hi][1])*t); return f1,B
 def render(tag,events):
     wav=ptq_render.CACHE/f'pedal-{tag}.wav'

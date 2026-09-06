@@ -4,7 +4,7 @@
 #define PF_PARTIAL_H
 #define PF_PARTIAL_MODES 64
 #define PF_PARTIAL_POINTS 10
-#define PF_PARTIAL_ANCHORS 15   /* C1..C8 every 6 semitones (MIDI 24..108) */
+#define PF_PARTIAL_ANCHORS 30   /* A0..C8 every 3 semitones (MIDI 21..108): the Salamander sample grid */
 #define PF_PARTIAL_LAYERS 2
 typedef struct {
     float tuning[PF_PARTIAL_ANCHORS][2]; /* measured f1 / equal-tempered f1, B */
@@ -42,9 +42,13 @@ typedef struct {
     double dfac[PF_PARTIAL_MODES];    /* current per-sample damping factor */
     double damp[PF_PARTIAL_MODES];    /* accumulated damper gain */
     double sgrow, scap;               /* una corda fundamental sustain: per-sample growth and cap */
+    double onset_s;                   /* raised-cosine onset length: 4 ms from C3 up, longer below (bass notes build over 20-40 ms) */
+    int seg; long seg_end;            /* envelope segment being played and the sample index where it ends */
+    double cur[PF_PARTIAL_MODES], step[PF_PARTIAL_MODES]; /* incremental envelope: current amplitude and per-sample ratio */
     double dfloor;                    /* damper gain floor */
 } pf_partial;
 void pf_pedal_defaults(pf_pedal_params *p);
+double pf_onset_seconds(double f1);   /* register-dependent onset ramp length (shared with pf_attack) */
 void pf_partial_init(pf_partial *v, const pf_partial_patch *patch, double sr, double midi, double velocity);
 /* As pf_partial_init, with the pedal model; `soft` is the una corda amount 0..1 at note-on. */
 void pf_partial_init2(pf_partial *v, const pf_partial_patch *patch, double sr, double midi, double velocity, const pf_pedal_params *pedal, double soft);

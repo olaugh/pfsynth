@@ -26,27 +26,30 @@
 #ifndef PF_ATTACK_H
 #define PF_ATTACK_H
 #define PF_ATTACK_MODES 64   /* slow room modes + fast soundboard "knock" modes, one bank */
-#define PF_ATTACK_ANCHORS 15  /* C1..C8 every 6 semitones, same grid as pf_partial */
+#define PF_ATTACK_ANCHORS 30  /* A0..C8 every 3 semitones, same grid as pf_partial */
 #define PF_ATTACK_LAYERS 2    /* Salamander layers 6 (vel 48) and 13 (vel 100) */
 typedef struct {
     float mode_hz[PF_ATTACK_MODES];
     float mode_t60[PF_ATTACK_MODES];
     float mode_db[PF_ATTACK_MODES];      /* shared mode weights, dB (relative) */
     float mode_delay_ms[PF_ATTACK_MODES];/* per-mode strike delay after note-on (the low body/key thump peaks ~15-20 ms after the tone) */
+    float mode_db_key[PF_ATTACK_ANCHORS][PF_ATTACK_MODES]; /* per-anchor offsets (dB) on mode_db: the body's mode weights change from key to key by +-5..10 dB */
     float pulse_ms;                       /* minimum excitation pulse length (Hann) */
     float pulse_cycles;                   /* pulse length is at least this many periods of the mode (0.5 = half a period: low modes get a gentle strike, no broadband onset skirt) */
     float thump_db[PF_ATTACK_ANCHORS][PF_ATTACK_LAYERS]; /* excitation level, dBFS of the reference recordings */
     float noise_db[PF_ATTACK_ANCHORS][PF_ATTACK_LAYERS]; /* noise burst peak RMS level, dBFS */
     float noise_ms[PF_ATTACK_ANCHORS][PF_ATTACK_LAYERS]; /* noise burst time to -60 dB */
     float noise_hz[PF_ATTACK_ANCHORS][PF_ATTACK_LAYERS]; /* two-pole (2x one-pole) lowpass cutoff of the noise */
-    float thump_mix, noise_mix;           /* audition trims, 1 = as fitted, 0 = off */
+    float thump_mix, noise_mix;           /* trims, 1 = as fitted, 0 = off: thump_mix scales all struck modes, noise_mix the noise burst */
+    float slow_mix, knock_mix;            /* extra trims for the slow body modes (T60 >= 0.5 s) and the fast knock modes; 1 = as fitted */
 } pf_attack_patch;
 typedef struct {
     int modes, age; double sr;
     double a1[PF_ATTACK_MODES], a2[PF_ATTACK_MODES], g[PF_ATTACK_MODES];
     double y1[PF_ATTACK_MODES], y2[PF_ATTACK_MODES];
     int delay[PF_ATTACK_MODES], plen[PF_ATTACK_MODES]; double pgain[PF_ATTACK_MODES];
-    double noise_gain, noise_rate, lp_a, lp_z1, lp_z2; unsigned rng;
+    double onset_s;   /* register-dependent onset ramp on the whole onset layer (see pf_onset_seconds) */
+    double noise_gain, noise_rate, lp_a, lp_z1, lp_z2, noise_comp; unsigned rng;
 } pf_attack;
 void pf_attack_init(pf_attack *v, const pf_attack_patch *p, double sr, double midi, double velocity);
 void pf_attack_process(pf_attack *v, float *out, int n);   /* additive */
