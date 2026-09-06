@@ -24,6 +24,9 @@ typedef struct {
                                          * under the tone ARE most of the sound (Pianoteq D#7: the bands below the fundamental are
                                          * as strong as the tone in the first 30 ms), and trimming them leaves a bare, piercing sine. */
     double treble_db; /* onset trim (all three layers) in the top register instead, 0 = as fitted */
+    double top_knock_t60, top_knock_db, top_knock_lo; /* very top (from C7, fully at F#7): the knock modes just below the fundamental (from top_knock_lo * f1 up) rang
+                                         * ~3x longer than Pianoteq's (2-2.9 kHz band +8..11 dB at 20-100 ms: a clang under the tone);
+                                         * their decay is scaled by top_knock_t60 and their level offset by top_knock_db */
     int limiter;      /* 1 = block lookahead peak limiter after the gain (live playback); 0 = none (offline: render in float, normalize afterwards) */
     int resonance;    /* 1 = sympathetic string resonance (pf_resonance) over the mix */
     double resonance_db; /* trim on the sympathetic bank output, 0 = as fitted */

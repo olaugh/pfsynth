@@ -7,7 +7,7 @@
 #include "../../experiments/attack-ptq/patch_attack.h"   /* pf_attack_experiment */
 
 const pf_partial_patch *pf_player_patch(int tone){return tone?&pf_partial_pianoteq:&pf_partial_salamander;}
-void pf_player_defaults(pf_player_options *o){o->tone=1;o->attack=1;o->pedal_mode=1;o->una_corda=1;o->gain=4.0;o->body_db=-18;o->knock_db=-22;o->noise_db=-17;o->treble_db=0;o->limiter=1;o->resonance=1;o->resonance_db=0;}   /* onset trims chosen by ear (2026-09-05), see experiments/attack-ptq/listening-trims.json */
+void pf_player_defaults(pf_player_options *o){o->tone=1;o->attack=1;o->pedal_mode=1;o->una_corda=1;o->gain=4.0;o->body_db=-18;o->knock_db=-22;o->noise_db=-17;o->treble_db=0;o->top_knock_t60=.25;o->top_knock_db=0;o->top_knock_lo=.5;   /* tools/treble_knock_fit.py + excess check, 2026-09-06 */o->limiter=1;o->resonance=1;o->resonance_db=0;}   /* onset trims chosen by ear (2026-09-05), see experiments/attack-ptq/listening-trims.json */
 static void apply_trims(pf_player *pl){pl->apatch=pf_attack_experiment;}
 /* Onset trims for one key: the ear-chosen mid-register trims below A#5, the treble trim from G#6 up, linear between. */
 static void key_trims(const pf_player *pl,int note,pf_attack_patch *p)
@@ -15,6 +15,13 @@ static void key_trims(const pf_player *pl,int note,pf_attack_patch *p)
     double w=(92-note)/10.0;if(w<0)w=0;if(w>1)w=1;
     double body=pl->opt.body_db*w+pl->opt.treble_db*(1-w),knock=pl->opt.knock_db*w+pl->opt.treble_db*(1-w),noise=pl->opt.noise_db*w+pl->opt.treble_db*(1-w);
     p->slow_mix=(float)pow(10,body/20);p->knock_mix=(float)pow(10,knock/20);p->noise_mix=(float)(pf_attack_experiment.noise_mix*pow(10,noise/20));
+    double top=(note-96)/6.0;if(top<0)top=0;if(top>1)top=1;
+    if(top>0){
+        double f1=440*pow(2,(note-69)/12.0);
+        for(int m=0;m<PF_ATTACK_MODES;m++)if(p->mode_t60[m]<.5f&&p->mode_hz[m]>=pl->opt.top_knock_lo*f1&&p->mode_hz[m]<f1){
+            p->mode_t60[m]*=(float)(1-top*(1-pl->opt.top_knock_t60));p->mode_db[m]+=(float)(top*pl->opt.top_knock_db);
+        }
+    }
 }
 static void build_resonance(pf_player *pl)
 {

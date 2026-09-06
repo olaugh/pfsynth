@@ -25,7 +25,7 @@ class PfProcessor extends AudioWorkletProcessor {
       case 'wasm': {
         const { instance } = await WebAssembly.instantiate(m.bytes, { wasi_snapshot_preview1: this.wasiStubs() });
         this.ex = instance.exports; this.ex._initialize(); this.ex.pfw_init(sampleRate); this.ready = true;
-        const defaults = []; for (let i = 0; i < 17; i++) defaults.push(this.ex.pfw_default(i));
+        const defaults = []; for (let i = 0; i < 19; i++) defaults.push(this.ex.pfw_default(i));
         this.port.postMessage({ type: 'ready', sampleRate, defaults });
         break;
       }

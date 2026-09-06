@@ -17,14 +17,14 @@ static float outbuf[4096];
 static unsigned char keys[128];
 static int loaded;
 enum { OPT_TONE, OPT_ATTACK, OPT_PEDAL_MODE, OPT_UNA_CORDA, OPT_GAIN_DB, OPT_BODY_DB, OPT_KNOCK_DB, OPT_NOISE_DB, OPT_LIMITER,
-       OPT_RESONANCE, OPT_RESONANCE_DB, OPT_RES_COUPLING, OPT_RES_SKIRT, OPT_RES_SUSTAIN, OPT_RES_TILT, OPT_RES_T60, OPT_TREBLE_DB, OPT_COUNT };
+       OPT_RESONANCE, OPT_RESONANCE_DB, OPT_RES_COUPLING, OPT_RES_SKIRT, OPT_RES_SUSTAIN, OPT_RES_TILT, OPT_RES_T60, OPT_TREBLE_DB, OPT_TOP_KNOCK_T60, OPT_TOP_KNOCK_DB, OPT_COUNT };
 static double get_opt(int id)
 {
     switch(id){
     case OPT_TONE:return opt.tone;case OPT_ATTACK:return opt.attack;case OPT_PEDAL_MODE:return opt.pedal_mode;case OPT_UNA_CORDA:return opt.una_corda;
     case OPT_GAIN_DB:return 20*log10(opt.gain);case OPT_BODY_DB:return opt.body_db;case OPT_KNOCK_DB:return opt.knock_db;case OPT_NOISE_DB:return opt.noise_db;
     case OPT_LIMITER:return opt.limiter;case OPT_RESONANCE:return opt.resonance;case OPT_RESONANCE_DB:return opt.resonance_db;
-    case OPT_RES_COUPLING:return rp.coupling_db;case OPT_RES_SKIRT:return rp.skirt_hz;case OPT_RES_SUSTAIN:return rp.sustain_db;case OPT_RES_TILT:return rp.tilt_db;case OPT_RES_T60:return rp.t60_scale;case OPT_TREBLE_DB:return opt.treble_db;
+    case OPT_RES_COUPLING:return rp.coupling_db;case OPT_RES_SKIRT:return rp.skirt_hz;case OPT_RES_SUSTAIN:return rp.sustain_db;case OPT_RES_TILT:return rp.tilt_db;case OPT_RES_T60:return rp.t60_scale;case OPT_TREBLE_DB:return opt.treble_db;case OPT_TOP_KNOCK_T60:return opt.top_knock_t60;case OPT_TOP_KNOCK_DB:return opt.top_knock_db;
     }
     return 0;
 }
@@ -45,7 +45,7 @@ void EXPORT(pfw_set)(int id,double v)
     case OPT_GAIN_DB:opt.gain=pow(10,v/20);break;case OPT_BODY_DB:opt.body_db=v;break;case OPT_KNOCK_DB:opt.knock_db=v;break;case OPT_NOISE_DB:opt.noise_db=v;break;
     case OPT_LIMITER:opt.limiter=v>.5;break;case OPT_RESONANCE:opt.resonance=v>.5;break;case OPT_RESONANCE_DB:opt.resonance_db=v;break;
     case OPT_RES_COUPLING:rp.coupling_db=(float)v;res=1;break;case OPT_RES_SKIRT:rp.skirt_hz=(float)v;res=1;break;case OPT_RES_SUSTAIN:rp.sustain_db=(float)v;res=1;break;
-    case OPT_RES_TILT:rp.tilt_db=(float)v;res=1;break;case OPT_RES_T60:rp.t60_scale=(float)v;res=1;break;case OPT_TREBLE_DB:opt.treble_db=v;break;
+    case OPT_RES_TILT:rp.tilt_db=(float)v;res=1;break;case OPT_RES_T60:rp.t60_scale=(float)v;res=1;break;case OPT_TREBLE_DB:opt.treble_db=v;break;case OPT_TOP_KNOCK_T60:opt.top_knock_t60=v;break;case OPT_TOP_KNOCK_DB:opt.top_knock_db=v;break;
     default:return;
     }
     pf_player_set_options(&player,&opt);

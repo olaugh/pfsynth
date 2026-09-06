@@ -145,6 +145,8 @@ struct ContentView: View {
                         if show("resonance sustain bound driven experimental") { slider("Resonance sustain bound", $m.options.resSustain, d.resSustain, -40...0, "%+.0f dB", "cap on the driven build-up of a string sitting on a played partial") }
                         if show("resonance tilt octave experimental") { slider("Resonance tilt", $m.options.resTilt, d.resTilt, -12...6, "%+.1f dB/oct", "coupling change per octave above 250 Hz") }
                         if show("resonance decay scale t60 experimental") { slider("Resonance decay scale", $m.options.resT60, d.resT60, 0.25...4, "%.2f ×", "multiplies the sympathetic strings' free decay times") }
+                        if show("top knock decay treble clang experimental") { slider("Top knock decay (C7 up)", $m.options.topKnockT60, d.topKnockT60, 0.05...1, "%.2f ×", "decay scale of the knock modes just below the fundamental in the very top; at 1x they rang 3x longer than Pianoteq's and clanged") }
+                        if show("top knock level treble clang experimental") { slider("Top knock level", $m.options.topKnockDb, d.topKnockDb, -12...12, "%+.0f dB", "level offset of those modes") }
                     }
                     section("Legacy", "legacy salamander tone binary pedal", collapsed: true, hint: "Earlier behaviour kept for A/B listening; not the known-good path.") {
                         if show("salamander tone patch legacy pianoteq") { toggle("Salamander-fitted tone", Binding(get: { !m.options.pianoteqTone }, set: { m.options.pianoteqTone = !$0 }), !d.pianoteqTone, "the frozen 2026-09-04 baseline patch instead of the Pianoteq-fitted one") }

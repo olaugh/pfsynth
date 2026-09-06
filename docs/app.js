@@ -1,11 +1,11 @@
 // pfsynth web demo: WebAssembly piano model in an AudioWorklet + Verovio score following
 // over nASAP note alignments.  Static page, no build step (see README.md).
 'use strict';
-const BUILD = '20260906g';   // bump with index.html's ?v= so GitHub Pages' 10-minute cache doesn't serve a stale script
+const BUILD = '20260906h';   // bump with index.html's ?v= so GitHub Pages' 10-minute cache doesn't serve a stale script
 const OPT = { TONE:0, ATTACK:1, PEDAL_MODE:2, UNA_CORDA:3, GAIN_DB:4, BODY_DB:5, KNOCK_DB:6, NOISE_DB:7, LIMITER:8,
-  RESONANCE:9, RESONANCE_DB:10, RES_COUPLING:11, RES_SKIRT:12, RES_SUSTAIN:13, RES_TILT:14, RES_T60:15, TREBLE_DB:16 };
+  RESONANCE:9, RESONANCE_DB:10, RES_COUPLING:11, RES_SKIRT:12, RES_SUSTAIN:13, RES_TILT:14, RES_T60:15, TREBLE_DB:16, TOP_KNOCK_T60:17, TOP_KNOCK_DB:18 };
 // Fallback defaults (the wasm module's pfw_default() is the source of truth and replaces these once the audio engine starts).
-const FALLBACK_DEFAULTS = { 0:1, 1:1, 2:1, 3:1, 4:6.02, 5:-18, 6:-22, 7:-17, 8:1, 9:1, 10:0, 11:-32, 12:1.5, 13:-15, 14:0, 15:1, 16:0 };
+const FALLBACK_DEFAULTS = { 0:1, 1:1, 2:1, 3:1, 4:6.02, 5:-18, 6:-22, 7:-17, 8:1, 9:1, 10:0, 11:-32, 12:1.5, 13:-15, 14:0, 15:1, 16:0, 17:0.25, 18:0 };
 const GROUPS = [
   { key:'sound', name:'Sound', hint:'' },
   { key:'onset', name:'Onset', hint:'The struck-soundboard layer under every note: trims chosen by ear on 2026-09-05.' },
@@ -29,6 +29,8 @@ const SETTINGS = [
   { id:OPT.RES_SUSTAIN, name:'Resonance sustain bound', group:'experimental', unit:'dB', min:-40, max:0, step:1, desc:'Cap on the driven build-up of a string sitting exactly on a played partial.' },
   { id:OPT.RES_TILT, name:'Resonance tilt', group:'experimental', unit:'dB/oct', min:-12, max:6, step:0.5, desc:'Coupling change per octave above 250 Hz.' },
   { id:OPT.RES_T60, name:'Resonance decay scale', group:'experimental', unit:'×', min:0.25, max:4, step:0.05, desc:'Multiplies the sympathetic strings’ free decay times (taken from the tonal patch).' },
+  { id:OPT.TOP_KNOCK_T60, name:'Top knock decay', group:'experimental', unit:'×', min:0.05, max:1, step:0.05, desc:'From C7 up (fully at F#7): decay scale of the knock modes just below the fundamental. At 1× they rang ~3× longer than Pianoteq’s and clanged under the tone.' },
+  { id:OPT.TOP_KNOCK_DB, name:'Top knock level', group:'experimental', unit:'dB', min:-12, max:12, step:1, desc:'Level offset of those same modes.' },
   { id:OPT.TONE, name:'Tonal patch', group:'legacy', type:'choice', options:[[1,'Pianoteq-fitted (known good)'],[0,'Salamander-fitted (legacy)']], desc:'Which fitted partial patch the voices use. The Salamander fit is the frozen 2026-09-04 baseline.' },
   { id:OPT.LIMITER, name:'Limiter', group:'legacy', type:'toggle', desc:'Block lookahead peak limiter at −0.5 dBFS. Turning it off exposes clipping on fff chords.' },
 ];

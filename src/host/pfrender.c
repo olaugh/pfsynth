@@ -34,6 +34,9 @@ int main(int argc,char **argv)
         else if(!strcmp(argv[i],"--knock")&&i+1<argc)o.knock_db=atof(argv[++i]);
         else if(!strcmp(argv[i],"--noise")&&i+1<argc)o.noise_db=atof(argv[++i]);
         else if(!strcmp(argv[i],"--treble")&&i+1<argc)o.treble_db=atof(argv[++i]);
+        else if(!strcmp(argv[i],"--top-knock-t60")&&i+1<argc)o.top_knock_t60=atof(argv[++i]);
+        else if(!strcmp(argv[i],"--top-knock-db")&&i+1<argc)o.top_knock_db=atof(argv[++i]);
+        else if(!strcmp(argv[i],"--top-knock-lo")&&i+1<argc)o.top_knock_lo=atof(argv[++i]);
         else if(!strcmp(argv[i],"--no-resonance"))o.resonance=0;
         else if(!strcmp(argv[i],"--resonance-db")&&i+1<argc)o.resonance_db=atof(argv[++i]);
         else if(!strcmp(argv[i],"--res-coupling")&&i+1<argc)rp.coupling_db=(float)atof(argv[++i]);
