@@ -1,7 +1,7 @@
 // pfsynth web demo: WebAssembly piano model in an AudioWorklet + Verovio score following
 // over nASAP note alignments.  Static page, no build step (see README.md).
 'use strict';
-const BUILD = '20260906d';   // bump with index.html's ?v= so GitHub Pages' 10-minute cache doesn't serve a stale script
+const BUILD = '20260906e';   // bump with index.html's ?v= so GitHub Pages' 10-minute cache doesn't serve a stale script
 const OPT = { TONE:0, ATTACK:1, PEDAL_MODE:2, UNA_CORDA:3, GAIN_DB:4, BODY_DB:5, KNOCK_DB:6, NOISE_DB:7, LIMITER:8,
   RESONANCE:9, RESONANCE_DB:10, RES_COUPLING:11, RES_SKIRT:12, RES_SUSTAIN:13, RES_TILT:14, RES_T60:15 };
 // Fallback defaults (the wasm module's pfw_default() is the source of truth and replaces these once the audio engine starts).
@@ -103,11 +103,11 @@ async function selectPiece(p) {
   state.piece = p; const token = ++state.token;
   for (const li of document.querySelectorAll('#pieces li')) li.classList.toggle('sel', li.dataset.id === p.id);
   $('#nowplaying').innerHTML = `<b>${esc(p.composer)}</b> — ${esc(p.title)} <span>· ${esc(p.performer)}</span>`;
-  setStatus('Loading…'); pause(); clearFollow(); $('#score').innerHTML = ''; $('#score').classList.remove('hidden'); $('#roll').classList.add('hidden'); state.roll = null; $('#scorewrap').scrollTop = 0; $('#placeholder').classList.remove('hidden'); $('#placeholder').innerHTML = '<h2>Rendering score…</h2>';
+  setStatus('Loading…'); pause(); clearFollow(); $('#score').innerHTML = ''; $('#score').classList.remove('hidden'); $('#roll').classList.add('hidden'); $('#scorewrap').classList.remove('rollmode'); state.roll = null; $('#scorewrap').scrollTop = 0; $('#placeholder').classList.remove('hidden'); $('#placeholder').innerHTML = '<h2>Rendering score…</h2>';
   try {
     if (p.custom) {   // no score or alignment: piano roll instead
       state.pendingLoad = p.bytes.slice(0); state.pendingLoadToken = token; state.align = null;
-      $('#placeholder').classList.add('hidden'); $('#score').classList.add('hidden'); $('#roll').classList.remove('hidden');
+      $('#placeholder').classList.add('hidden'); $('#score').classList.add('hidden'); $('#roll').classList.remove('hidden'); $('#scorewrap').classList.add('rollmode');
       await ensureAudio(); if (token !== state.token) return; sendLoad(); return;
     }
     const [midi, xml, tsv] = await Promise.all([
@@ -273,6 +273,7 @@ function resetFollow(t) {
 function light(i, off, scroll) {
   const F = state.follow, id = F.evToId.get(i); if (!id || !state.score) return;
   const el = state.score.get(id); if (!el) return;
+  el.style.setProperty('--vc', velocityColor(state.events.val[i], 1));   // highlight colour follows the performed velocity
   el.classList.add('on'); F.active.push({ el, off: Math.max(off, state.events.t[i] + 0.12) });
   if (scroll) keepVisible(el);
 }
@@ -312,10 +313,28 @@ function buildRoll() {
 }
 function velocityColor(v, alpha) { const h = 220 - 220 * Math.min(1, v / 110); return `hsla(${h}, 75%, ${45 + 10 * (v / 127)}%, ${alpha})`; }
 function buildVelocityLegend() { const el = $('#vlegend'); if (!el) return; const stops = []; for (let v = 1; v <= 127; v += 9) stops.push(velocityColor(v, 1)); el.style.background = `linear-gradient(90deg, ${stops.join(',')})`; }
+// The canvas backing store follows the container through a ResizeObserver: reading clientWidth /
+// clientHeight every frame and resizing to match fed back through scrollbars (resize -> scrollbar
+// toggles -> client size changes -> resize...), which shook the whole roll even when idle.
+function rollSize() {
+  if (!state.rollSize) {
+    const wrap = $('#scorewrap'), r = wrap.getBoundingClientRect();
+    state.rollSize = { W: Math.max(1, Math.round(r.width)), H: Math.max(1, Math.round(r.height)) };
+    if (window.ResizeObserver && !state.rollObserver) {
+      state.rollObserver = new ResizeObserver(entries => {
+        const b = entries[0].contentRect; const W = Math.max(1, Math.round(b.width)), H = Math.max(1, Math.round(b.height));
+        if (state.rollSize && W === state.rollSize.W && H === state.rollSize.H) return;
+        state.rollSize = { W, H }; if (state.roll) drawRoll(currentTime(), true);
+      });
+      state.rollObserver.observe(wrap);
+    }
+  }
+  return state.rollSize;
+}
 function drawRoll(t, force) {
   const R = state.roll, c = $('#roll'); if (!R) return;
-  const wrap = $('#scorewrap'), W = wrap.clientWidth, H = wrap.clientHeight, dpr = window.devicePixelRatio || 1;
-  if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.width = W + 'px'; c.style.height = H + 'px'; force = true; }
+  const { W, H } = rollSize(), dpr = window.devicePixelRatio || 1, bw = Math.round(W * dpr), bh = Math.round(H * dpr);
+  if (c.width !== bw || c.height !== bh) { c.width = bw; c.height = bh; force = true; }
   if (!force && Math.abs(t - R.lastDraw) < 0.004) return; R.lastDraw = t;
   const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   g.fillStyle = '#fbfaf5'; g.fillRect(0, 0, W, H);
@@ -331,7 +350,7 @@ function drawRoll(t, force) {
     if (on) { g.strokeStyle = '#e0553d'; g.lineWidth = 1.5; g.strokeRect(xa, y(n.pitch) - kh + 0.5, xb - xa, kh - 1); }
   }
   g.fillStyle = '#e0553d'; g.fillRect(W * 0.3, top, 2, bottom - top);
-  g.fillStyle = '#666'; g.font = '12px sans-serif'; g.fillText('Piano roll (no score for this file) · velocity = colour', 40, 16);
+  g.fillStyle = '#666'; g.font = '12px sans-serif'; g.fillText('Piano roll (no score for this file)', 40, 16);
 }
 
 // ---------- settings palette ----------
@@ -394,6 +413,6 @@ function init() {
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { if (state.events) seek(Math.max(0, Math.min(state.duration, currentTime() + (e.key === 'ArrowLeft' ? -5 : 5)))); }
   });
   setupDrop(); loadPieces(); requestAnimationFrame(tick);
-  window.addEventListener('resize', () => { if (state.roll) drawRoll(currentTime(), true); });
+
 }
 init();
