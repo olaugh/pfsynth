@@ -1,6 +1,7 @@
 // pfsynth web demo: WebAssembly piano model in an AudioWorklet + Verovio score following
 // over nASAP note alignments.  Static page, no build step (see README.md).
 'use strict';
+const BUILD = '20260906c';   // bump with index.html's ?v= so GitHub Pages' 10-minute cache doesn't serve a stale script
 const OPT = { TONE:0, ATTACK:1, PEDAL_MODE:2, UNA_CORDA:3, GAIN_DB:4, BODY_DB:5, KNOCK_DB:6, NOISE_DB:7, LIMITER:8,
   RESONANCE:9, RESONANCE_DB:10, RES_COUPLING:11, RES_SKIRT:12, RES_SUSTAIN:13, RES_TILT:14, RES_T60:15 };
 // Fallback defaults (the wasm module's pfw_default() is the source of truth and replaces these once the audio engine starts).
@@ -56,23 +57,44 @@ function renderPieces(q) {
 // ---------- user MIDI files (drag & drop / Open MIDI…) ----------
 let customSeq = 0;
 async function addFiles(files) {
-  const midis = Array.from(files).filter(f => /\.(mid|midi|smf|kar)$/i.test(f.name) || f.type === 'audio/midi' || f.type === 'audio/mid');
-  if (!midis.length) { setStatus('Drop a Standard MIDI File (.mid)', true); return; }
-  let first = null;
-  for (const f of midis) {
+  const list = Array.from(files); if (!list.length) return;
+  setStatus('Reading ' + (list.length === 1 ? list[0].name : list.length + ' files') + '…');
+  let first = null; const rejected = [];
+  for (const f of list) {
     const bytes = await f.arrayBuffer();
+    const head = new Uint8Array(bytes, 0, Math.min(4, bytes.byteLength));
+    const isSMF = head.length === 4 && head[0] === 0x4d && head[1] === 0x54 && head[2] === 0x68 && head[3] === 0x64; // "MThd"
+    if (!isSMF) { rejected.push(f.name); continue; }
     const p = { id: 'custom-' + (++customSeq), custom: true, composer: 'Your file', title: f.name.replace(/\.(mid|midi|smf|kar)$/i, ''), performer: (f.size / 1024).toFixed(0) + ' KB', duration: 0, tags: ['your MIDI'], keywords: 'custom file dropped', bytes };
     state.custom.unshift(p); if (!first) first = p;
   }
   renderPieces($('#search').value);
+  if (rejected.length) setStatus('Not a Standard MIDI File: ' + rejected.join(', '), true);
   if (first) selectPiece(first);
+}
+function dragHasFiles(e) {
+  const dt = e.dataTransfer; if (!dt) return false;
+  const types = Array.from(dt.types || []);
+  return types.includes('Files') || types.includes('application/x-moz-file') || Array.from(dt.items || []).some(i => i.kind === 'file');
+}
+function droppedFiles(dt) {
+  let files = Array.from(dt.files || []);
+  if (!files.length && dt.items) files = Array.from(dt.items).filter(i => i.kind === 'file').map(i => i.getAsFile()).filter(Boolean);
+  return files;
 }
 function setupDrop() {
   let depth = 0; const overlay = $('#dropzone');
-  document.addEventListener('dragenter', e => { if (!e.dataTransfer || !Array.from(e.dataTransfer.types).includes('Files')) return; e.preventDefault(); depth++; overlay.classList.add('show'); });
-  document.addEventListener('dragover', e => { if (!e.dataTransfer || !Array.from(e.dataTransfer.types).includes('Files')) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
-  document.addEventListener('dragleave', e => { if (--depth <= 0) { depth = 0; overlay.classList.remove('show'); } });
-  document.addEventListener('drop', e => { e.preventDefault(); depth = 0; overlay.classList.remove('show'); if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+  const hide = () => { depth = 0; overlay.classList.remove('show'); };
+  document.addEventListener('dragenter', e => { e.preventDefault(); if (dragHasFiles(e)) { depth++; overlay.classList.add('show'); } });
+  document.addEventListener('dragover', e => { e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; });
+  document.addEventListener('dragleave', e => { if (--depth <= 0) hide(); });
+  document.addEventListener('drop', e => {
+    e.preventDefault(); e.stopPropagation(); hide();
+    const files = e.dataTransfer ? droppedFiles(e.dataTransfer) : [];
+    if (files.length) addFiles(files); else setStatus('Drop MIDI files from your disk (.mid)', true);
+  });
+  // never let the browser navigate to a dropped file, wherever it lands
+  window.addEventListener('dragover', e => e.preventDefault()); window.addEventListener('drop', e => e.preventDefault());
   $('#openfile').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
   $('#openbtn').onclick = () => $('#openfile').click();
 }
@@ -119,7 +141,7 @@ async function ensureAudio() {
   const ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'playback' });
   state.audio = ctx;
   state.readyPromise = (async () => {
-    await ctx.audioWorklet.addModule('worklet.js');
+    await ctx.audioWorklet.addModule('worklet.js?v=' + BUILD);
     const node = new AudioWorkletNode(ctx, 'pfsynth', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
     node.connect(ctx.destination); state.node = node;
     node.port.onmessage = (e) => onWorklet(e.data);
