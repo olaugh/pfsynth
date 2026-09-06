@@ -132,6 +132,7 @@ struct ContentView: View {
                             if show("body slow modes soundboard thump onset") { slider("Body (slow modes)", $m.options.bodyDb, d.bodyDb, -24...6, "%+.0f dB", "low body/room modes 59–450 Hz; ear-chosen −18") }
                             if show("knock fast modes click onset") { slider("Knock (fast modes)", $m.options.knockDb, d.knockDb, -24...6, "%+.0f dB", "fast soundboard modes to 2.8 kHz: the percussive click") }
                             if show("noise burst hammer hiss onset") { slider("Noise burst", $m.options.noiseDb, d.noiseDb, -24...6, "%+.0f dB", "filtered noise between the partials in the first tens of ms") }
+                            if show("treble top register onset knock") { slider("Treble onset (G#6 up)", $m.options.trebleDb, d.trebleDb, -24...6, "%+.0f dB", "onset trim in the top register, where knock and body under the tone are most of the sound; the three trims above apply below A#5") }
                         }.disabled(!m.options.attack)
                     }
                     section("Pedals", "pedal sustain damper half una corda soft sostenuto") {

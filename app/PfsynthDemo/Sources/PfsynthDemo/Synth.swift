@@ -11,11 +11,11 @@ struct SongData {
 /// Every knob of the player with its known-good default (the values a fresh `SynthOptions()` carries).
 struct SynthOptions: Equatable {
     var pianoteqTone = true; var attack = true; var continuousPedal = true; var unaCorda = true; var gainDb = 6.0
-    var bodyDb = -18.0, knockDb = -22.0, noiseDb = -17.0   // onset trims relative to the fit, chosen by ear on 2026-09-05 (experiments/attack-ptq/listening-trims.json)
+    var bodyDb = -18.0, knockDb = -22.0, noiseDb = -17.0, trebleDb = 0.0   // onset trims (below A#5; trebleDb from G#6 up) relative to the fit, chosen by ear on 2026-09-05 (experiments/attack-ptq/listening-trims.json)
     var resonance = true, resonanceDb = 0.0                // sympathetic string resonance (experiments/sympathetic), fitted to Pianoteq lone notes
     var resCoupling = -32.0, resSkirt = 1.5, resSustain = -15.0, resTilt = 0.0, resT60 = 1.0   // its internals (Experimental section)
     var c: pf_player_options {
-        pf_player_options(tone: pianoteqTone ? 1 : 0, attack: attack ? 1 : 0, pedal_mode: continuousPedal ? 1 : 0, una_corda: unaCorda ? 1 : 0, gain: pow(10, gainDb / 20), body_db: bodyDb, knock_db: knockDb, noise_db: noiseDb, limiter: 1, resonance: resonance ? 1 : 0, resonance_db: resonanceDb)
+        pf_player_options(tone: pianoteqTone ? 1 : 0, attack: attack ? 1 : 0, pedal_mode: continuousPedal ? 1 : 0, una_corda: unaCorda ? 1 : 0, gain: pow(10, gainDb / 20), body_db: bodyDb, knock_db: knockDb, noise_db: noiseDb, treble_db: trebleDb, limiter: 1, resonance: resonance ? 1 : 0, resonance_db: resonanceDb)
     }
     var resonanceParams: pf_resonance_params {
         var r = pf_resonance_params(); pf_resonance_defaults(&r)

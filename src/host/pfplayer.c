@@ -7,12 +7,14 @@
 #include "../../experiments/attack-ptq/patch_attack.h"   /* pf_attack_experiment */
 
 const pf_partial_patch *pf_player_patch(int tone){return tone?&pf_partial_pianoteq:&pf_partial_salamander;}
-void pf_player_defaults(pf_player_options *o){o->tone=1;o->attack=1;o->pedal_mode=1;o->una_corda=1;o->gain=4.0;o->body_db=-18;o->knock_db=-22;o->noise_db=-17;o->limiter=1;o->resonance=1;o->resonance_db=0;}   /* onset trims chosen by ear (2026-09-05), see experiments/attack-ptq/listening-trims.json */
-static void apply_trims(pf_player *pl)
+void pf_player_defaults(pf_player_options *o){o->tone=1;o->attack=1;o->pedal_mode=1;o->una_corda=1;o->gain=4.0;o->body_db=-18;o->knock_db=-22;o->noise_db=-17;o->treble_db=0;o->limiter=1;o->resonance=1;o->resonance_db=0;}   /* onset trims chosen by ear (2026-09-05), see experiments/attack-ptq/listening-trims.json */
+static void apply_trims(pf_player *pl){pl->apatch=pf_attack_experiment;}
+/* Onset trims for one key: the ear-chosen mid-register trims below A#5, the treble trim from G#6 up, linear between. */
+static void key_trims(const pf_player *pl,int note,pf_attack_patch *p)
 {
-    pl->apatch=pf_attack_experiment;
-    pl->apatch.slow_mix=(float)pow(10,pl->opt.body_db/20);pl->apatch.knock_mix=(float)pow(10,pl->opt.knock_db/20);
-    pl->apatch.noise_mix=(float)(pf_attack_experiment.noise_mix*pow(10,pl->opt.noise_db/20));
+    double w=(92-note)/10.0;if(w<0)w=0;if(w>1)w=1;
+    double body=pl->opt.body_db*w+pl->opt.treble_db*(1-w),knock=pl->opt.knock_db*w+pl->opt.treble_db*(1-w),noise=pl->opt.noise_db*w+pl->opt.treble_db*(1-w);
+    p->slow_mix=(float)pow(10,body/20);p->knock_mix=(float)pow(10,knock/20);p->noise_mix=(float)(pf_attack_experiment.noise_mix*pow(10,noise/20));
 }
 static void build_resonance(pf_player *pl)
 {
@@ -97,7 +99,7 @@ static void note_on(pf_player *pl,int note,int vel)
         pf_partial_pedal(&v->p,pl->pedal_pos);
     }else pf_partial_init(&v->p,pf_player_patch(pl->opt.tone),pl->sr,note,velocity);
     v->attack=pl->opt.attack;
-    if(v->attack)pf_attack_init(&v->a,&pl->apatch,pl->sr,note,velocity);
+    if(v->attack){pf_attack_patch ap=pl->apatch;key_trims(pl,note,&ap);pf_attack_init(&v->a,&ap,pl->sr,note,velocity);}
     if(pl->opt.resonance){pf_resonance_strike(&pl->res,&v->p,note);string_open(pl,note);}
 }
 static void release_voice(pf_player *pl,pf_player_voice *v){(void)pl;v->sustained=0;pf_partial_release(&v->p);}

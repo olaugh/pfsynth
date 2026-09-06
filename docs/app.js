@@ -1,11 +1,11 @@
 // pfsynth web demo: WebAssembly piano model in an AudioWorklet + Verovio score following
 // over nASAP note alignments.  Static page, no build step (see README.md).
 'use strict';
-const BUILD = '20260906f';   // bump with index.html's ?v= so GitHub Pages' 10-minute cache doesn't serve a stale script
+const BUILD = '20260906g';   // bump with index.html's ?v= so GitHub Pages' 10-minute cache doesn't serve a stale script
 const OPT = { TONE:0, ATTACK:1, PEDAL_MODE:2, UNA_CORDA:3, GAIN_DB:4, BODY_DB:5, KNOCK_DB:6, NOISE_DB:7, LIMITER:8,
-  RESONANCE:9, RESONANCE_DB:10, RES_COUPLING:11, RES_SKIRT:12, RES_SUSTAIN:13, RES_TILT:14, RES_T60:15 };
+  RESONANCE:9, RESONANCE_DB:10, RES_COUPLING:11, RES_SKIRT:12, RES_SUSTAIN:13, RES_TILT:14, RES_T60:15, TREBLE_DB:16 };
 // Fallback defaults (the wasm module's pfw_default() is the source of truth and replaces these once the audio engine starts).
-const FALLBACK_DEFAULTS = { 0:1, 1:1, 2:1, 3:1, 4:6.02, 5:-18, 6:-22, 7:-17, 8:1, 9:1, 10:0, 11:-32, 12:1.5, 13:-15, 14:0, 15:1 };
+const FALLBACK_DEFAULTS = { 0:1, 1:1, 2:1, 3:1, 4:6.02, 5:-18, 6:-22, 7:-17, 8:1, 9:1, 10:0, 11:-32, 12:1.5, 13:-15, 14:0, 15:1, 16:0 };
 const GROUPS = [
   { key:'sound', name:'Sound', hint:'' },
   { key:'onset', name:'Onset', hint:'The struck-soundboard layer under every note: trims chosen by ear on 2026-09-05.' },
@@ -21,6 +21,7 @@ const SETTINGS = [
   { id:OPT.BODY_DB, name:'Body (slow soundboard modes)', group:'onset', unit:'dB', min:-40, max:6, step:1, desc:'Low body/room modes, 59–450 Hz. Fitted level is 0 dB; listening chose −18.' },
   { id:OPT.KNOCK_DB, name:'Knock (fast modes)', group:'onset', unit:'dB', min:-40, max:6, step:1, desc:'Fast soundboard modes up to 2.8 kHz that make the percussive click.' },
   { id:OPT.NOISE_DB, name:'Hammer noise', group:'onset', unit:'dB', min:-40, max:6, step:1, desc:'Short filtered noise burst between the partials in the first tens of ms.' },
+  { id:OPT.TREBLE_DB, name:'Treble onset', group:'onset', unit:'dB', min:-24, max:6, step:1, desc:'Onset layer trim from G#6 up (the three trims above apply below A#5, fading between). In the top register the knock and body under the tone are most of the sound; 0 dB = as fitted to Pianoteq.' },
   { id:OPT.PEDAL_MODE, name:'Continuous damper (half pedaling)', group:'pedals', type:'toggle', desc:'The damper follows the raw CC64 value. Off = binary sustain with a fixed release (legacy).' },
   { id:OPT.UNA_CORDA, name:'Una corda (CC67)', group:'pedals', type:'toggle', desc:'Soft pedal: −2.1 dB on the fundamental growing 1.7 dB per octave of partial index, plus a slower fundamental decay.' },
   { id:OPT.RES_COUPLING, name:'Resonance coupling', group:'experimental', unit:'dB', min:-50, max:-10, step:1, desc:'Free amplitude of a coincident string partial re the note’s partial at note-on.' },

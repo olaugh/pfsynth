@@ -20,7 +20,7 @@ static void wav_write(const char *path,const float *x,long n,int sr)
 }
 int main(int argc,char **argv)
 {
-    if(argc<3){fprintf(stderr,"usage: pfrender in.mid out.wav [start [end]] [--tone sal|ptq] [--no-attack] [--pedal binary|continuous] [--no-soft] [--gain x] [--raw] [--body dB] [--knock dB] [--noise dB] [--no-resonance] [--resonance-db dB] [--res-coupling dB] [--res-skirt Hz] [--res-sustain dB] [--res-tilt dB/oct] [--res-partials n] [--res-t60 x]\n");return 2;}
+    if(argc<3){fprintf(stderr,"usage: pfrender in.mid out.wav [start [end]] [--tone sal|ptq] [--no-attack] [--pedal binary|continuous] [--no-soft] [--gain x] [--raw] [--body dB] [--knock dB] [--noise dB] [--treble dB] [--no-resonance] [--resonance-db dB] [--res-coupling dB] [--res-skirt Hz] [--res-sustain dB] [--res-tilt dB/oct] [--res-partials n] [--res-t60 x]\n");return 2;}
     pf_player_options o;pf_player_defaults(&o);o.gain=1;o.limiter=0;double start=0,end=-1;int raw=0,pos=0;
     pf_resonance_params rp;pf_resonance_defaults(&rp);
     for(int i=3;i<argc;i++){
@@ -33,6 +33,7 @@ int main(int argc,char **argv)
         else if(!strcmp(argv[i],"--body")&&i+1<argc)o.body_db=atof(argv[++i]);
         else if(!strcmp(argv[i],"--knock")&&i+1<argc)o.knock_db=atof(argv[++i]);
         else if(!strcmp(argv[i],"--noise")&&i+1<argc)o.noise_db=atof(argv[++i]);
+        else if(!strcmp(argv[i],"--treble")&&i+1<argc)o.treble_db=atof(argv[++i]);
         else if(!strcmp(argv[i],"--no-resonance"))o.resonance=0;
         else if(!strcmp(argv[i],"--resonance-db")&&i+1<argc)o.resonance_db=atof(argv[++i]);
         else if(!strcmp(argv[i],"--res-coupling")&&i+1<argc)rp.coupling_db=(float)atof(argv[++i]);

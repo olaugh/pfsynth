@@ -19,7 +19,11 @@ typedef struct {
     int pedal_mode;   /* 0 = binary sustain + fixed release, 1 = continuous damper following CC64 */
     int una_corda;    /* 1 = apply CC67 as una corda (needs pedal_mode 1) */
     double gain;      /* linear makeup before the soft clip; the model's absolute level is recording dBFS */
-    double body_db, knock_db, noise_db; /* onset trims in dB relative to the fit: slow body modes, fast knock modes, noise burst */
+    double body_db, knock_db, noise_db; /* onset trims in dB relative to the fit: slow body modes, fast knock modes, noise burst.
+                                         * They apply in full up to A#5 and fade out by G#6: in the top register the knock and body
+                                         * under the tone ARE most of the sound (Pianoteq D#7: the bands below the fundamental are
+                                         * as strong as the tone in the first 30 ms), and trimming them leaves a bare, piercing sine. */
+    double treble_db; /* onset trim (all three layers) in the top register instead, 0 = as fitted */
     int limiter;      /* 1 = block lookahead peak limiter after the gain (live playback); 0 = none (offline: render in float, normalize afterwards) */
     int resonance;    /* 1 = sympathetic string resonance (pf_resonance) over the mix */
     double resonance_db; /* trim on the sympathetic bank output, 0 = as fitted */
