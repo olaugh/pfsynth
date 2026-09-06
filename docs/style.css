@@ -40,7 +40,12 @@ kbd { font:11px ui-monospace, SFMono-Regular, Menlo, monospace; background:var(-
 #transport .title span { color:var(--dim); }
 #seek { flex:2; accent-color:var(--accent); min-width:120px; }
 #time { font-variant-numeric:tabular-nums; color:var(--dim); min-width:90px; text-align:right; }
-#meters { display:flex; gap:14px; color:var(--dim); font-size:12px; align-items:center; }
+#meters { display:flex; gap:14px; color:var(--dim); font-size:12px; align-items:center; font-variant-numeric:tabular-nums; }
+#meters > span { flex:none; white-space:nowrap; }
+#meters b { display:inline-block; text-align:right; font-variant-numeric:tabular-nums; }
+#meters #voices { min-width:2.4em; }
+#meters #loadpct { min-width:3.4em; }
+#meters #status { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
 #meters .bar { width:70px; height:6px; background:var(--bg); border-radius:3px; overflow:hidden; display:inline-block; vertical-align:middle; margin-left:4px; }
 #meters .bar i { display:block; height:100%; background:var(--accent2); width:0; }
 #meters .bar i.hot { background:var(--accent); }

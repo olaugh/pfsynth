@@ -1,7 +1,7 @@
 // pfsynth web demo: WebAssembly piano model in an AudioWorklet + Verovio score following
 // over nASAP note alignments.  Static page, no build step (see README.md).
 'use strict';
-const BUILD = '20260906e';   // bump with index.html's ?v= so GitHub Pages' 10-minute cache doesn't serve a stale script
+const BUILD = '20260906f';   // bump with index.html's ?v= so GitHub Pages' 10-minute cache doesn't serve a stale script
 const OPT = { TONE:0, ATTACK:1, PEDAL_MODE:2, UNA_CORDA:3, GAIN_DB:4, BODY_DB:5, KNOCK_DB:6, NOISE_DB:7, LIMITER:8,
   RESONANCE:9, RESONANCE_DB:10, RES_COUPLING:11, RES_SKIRT:12, RES_SUSTAIN:13, RES_TILT:14, RES_T60:15 };
 // Fallback defaults (the wasm module's pfw_default() is the source of truth and replaces these once the audio engine starts).
