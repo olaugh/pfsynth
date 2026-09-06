@@ -22,7 +22,9 @@
    "vel_p95": 76,
    "repeated_rate": 0.0,
    "high_share": 0.0,
-   "notes_above_c7": 0
+   "notes_above_c7": 0,
+   "low_share": 0.006,
+   "notes_below_c2": 0
   },
   "pedal": {
    "cc64": 9596,
@@ -58,7 +60,9 @@
    "vel_p95": 96,
    "repeated_rate": 0.086,
    "high_share": 0.076,
-   "notes_above_c7": 120
+   "notes_above_c7": 120,
+   "low_share": 0.051,
+   "notes_below_c2": 164
   },
   "pedal": {
    "cc64": 8305,
@@ -92,12 +96,53 @@
    "vel_p95": 93,
    "repeated_rate": 0.031,
    "high_share": 0.006,
-   "notes_above_c7": 0
+   "notes_above_c7": 0,
+   "low_share": 0.011,
+   "notes_below_c2": 4
   },
   "pedal": {
    "cc64": 810,
    "half_share": 0.05,
    "cc67": 244,
+   "cc66": 0
+  },
+  "corpus": "ASAP",
+  "license": "CC BY-NC-SA 4.0"
+ },
+ {
+  "path": "/Users/john/sources/segno/tools/synth-ab/corpora/asap/Beethoven/Piano_Sonatas/23-1/Ladid01.mid",
+  "composer": "Beethoven",
+  "title": "Piano Sonatas 23-1",
+  "tags": [
+   "dynamics",
+   "low register",
+   "pedalling",
+   "polyphony",
+   "repeated notes"
+  ],
+  "why": "Appassionata, I: low tremolos and unison runs.",
+  "excerpt": [
+   305.0,
+   40
+  ],
+  "stats": {
+   "duration": 598.4,
+   "notes": 6400,
+   "max_polyphony": 9,
+   "notes_per_s": 10.7,
+   "peak_notes_2s": 76,
+   "vel_p5": 34,
+   "vel_p95": 90,
+   "repeated_rate": 0.165,
+   "high_share": 0.034,
+   "notes_above_c7": 4,
+   "low_share": 0.114,
+   "notes_below_c2": 205
+  },
+  "pedal": {
+   "cc64": 13911,
+   "half_share": 0.48,
+   "cc67": 2631,
    "cc66": 0
   },
   "corpus": "ASAP",
@@ -126,12 +171,91 @@
    "vel_p95": 81,
    "repeated_rate": 0.014,
    "high_share": 0.044,
-   "notes_above_c7": 10
+   "notes_above_c7": 10,
+   "low_share": 0.057,
+   "notes_below_c2": 48
   },
   "pedal": {
    "cc64": 8033,
    "half_share": 0.72,
    "cc67": 1587,
+   "cc66": 0
+  },
+  "corpus": "ASAP",
+  "license": "CC BY-NC-SA 4.0"
+ },
+ {
+  "path": "/Users/john/sources/segno/tools/synth-ab/corpora/asap/Beethoven/Piano_Sonatas/8-1/ChenS01.mid",
+  "composer": "Beethoven",
+  "title": "Piano Sonatas 8-1",
+  "tags": [
+   "dynamics",
+   "low register",
+   "pedalling",
+   "polyphony",
+   "repeated notes"
+  ],
+  "why": "Pathetique, I: low tremolo bass under the Allegro.",
+  "excerpt": [
+   257.5,
+   40
+  ],
+  "stats": {
+   "duration": 412.0,
+   "notes": 4443,
+   "max_polyphony": 8,
+   "notes_per_s": 10.8,
+   "peak_notes_2s": 58,
+   "vel_p5": 35,
+   "vel_p95": 90,
+   "repeated_rate": 0.161,
+   "high_share": 0.005,
+   "notes_above_c7": 0,
+   "low_share": 0.1,
+   "notes_below_c2": 200
+  },
+  "pedal": {
+   "cc64": 8110,
+   "half_share": 0.33,
+   "cc67": 2975,
+   "cc66": 0
+  },
+  "corpus": "ASAP",
+  "license": "CC BY-NC-SA 4.0"
+ },
+ {
+  "path": "/Users/john/sources/segno/tools/synth-ab/corpora/asap/Chopin/Etudes_op_10/12/Mordvinov04.mid",
+  "composer": "Chopin",
+  "title": "Etudes op 10 12",
+  "tags": [
+   "low register",
+   "pedalling",
+   "polyphony",
+   "repeated notes"
+  ],
+  "why": "Revolutionary Etude: relentless left-hand runs into the bass.",
+  "excerpt": [
+   52.5,
+   40
+  ],
+  "stats": {
+   "duration": 152.7,
+   "notes": 2141,
+   "max_polyphony": 8,
+   "notes_per_s": 14.0,
+   "peak_notes_2s": 47,
+   "vel_p5": 48,
+   "vel_p95": 96,
+   "repeated_rate": 0.08,
+   "high_share": 0.009,
+   "notes_above_c7": 0,
+   "low_share": 0.107,
+   "notes_below_c2": 69
+  },
+  "pedal": {
+   "cc64": 3182,
+   "half_share": 0.49,
+   "cc67": 237,
    "cc66": 0
   },
   "corpus": "ASAP",
@@ -162,7 +286,9 @@
    "vel_p95": 88,
    "repeated_rate": 0.052,
    "high_share": 0.133,
-   "notes_above_c7": 44
+   "notes_above_c7": 44,
+   "low_share": 0.023,
+   "notes_below_c2": 11
   },
   "pedal": {
    "cc64": 3049,
@@ -197,7 +323,9 @@
    "vel_p95": 77,
    "repeated_rate": 0.108,
    "high_share": 0.012,
-   "notes_above_c7": 1
+   "notes_above_c7": 1,
+   "low_share": 0.0,
+   "notes_below_c2": 0
   },
   "pedal": {
    "cc64": 2092,
@@ -230,7 +358,9 @@
    "vel_p95": 86,
    "repeated_rate": 0.012,
    "high_share": 0.015,
-   "notes_above_c7": 3
+   "notes_above_c7": 3,
+   "low_share": 0.064,
+   "notes_below_c2": 62
   },
   "pedal": {
    "cc64": 1256,
@@ -248,6 +378,7 @@
   "tags": [
    "dynamics",
    "high register",
+   "low register",
    "pedalling",
    "polyphony",
    "repeated notes"
@@ -267,7 +398,9 @@
    "vel_p95": 96,
    "repeated_rate": 0.128,
    "high_share": 0.108,
-   "notes_above_c7": 121
+   "notes_above_c7": 121,
+   "low_share": 0.094,
+   "notes_below_c2": 220
   },
   "pedal": {
    "cc64": 2505,
@@ -301,7 +434,9 @@
    "vel_p95": 77,
    "repeated_rate": 0.025,
    "high_share": 0.0,
-   "notes_above_c7": 0
+   "notes_above_c7": 0,
+   "low_share": 0.005,
+   "notes_below_c2": 0
   },
   "pedal": {
    "cc64": 5417,
@@ -337,7 +472,9 @@
    "vel_p95": 88,
    "repeated_rate": 0.069,
    "high_share": 0.012,
-   "notes_above_c7": 8
+   "notes_above_c7": 8,
+   "low_share": 0.048,
+   "notes_below_c2": 208
   },
   "pedal": {
    "cc64": 19798,
@@ -372,7 +509,9 @@
    "vel_p95": 96,
    "repeated_rate": 0.058,
    "high_share": 0.032,
-   "notes_above_c7": 19
+   "notes_above_c7": 19,
+   "low_share": 0.069,
+   "notes_below_c2": 99
   },
   "pedal": {
    "cc64": 7504,
@@ -408,7 +547,9 @@
    "vel_p95": 97,
    "repeated_rate": 0.22,
    "high_share": 0.25,
-   "notes_above_c7": 584
+   "notes_above_c7": 584,
+   "low_share": 0.02,
+   "notes_below_c2": 35
   },
   "pedal": {
    "cc64": 3571,
@@ -442,12 +583,53 @@
    "vel_p95": 83,
    "repeated_rate": 0.026,
    "high_share": 0.009,
-   "notes_above_c7": 0
+   "notes_above_c7": 0,
+   "low_share": 0.089,
+   "notes_below_c2": 137
   },
   "pedal": {
    "cc64": 11811,
    "half_share": 0.75,
    "cc67": 4335,
+   "cc66": 0
+  },
+  "corpus": "MAESTRO",
+  "license": "CC BY-NC-SA 4.0"
+ },
+ {
+  "path": "/Users/john/sources/jun04-pfsynth/maestro/midi/maestro-v3.0.0/2006/MIDI-Unprocessed_18_R1_2006_01-05_ORIG_MID--AUDIO_18_R1_2006_05_Track05_wav.midi",
+  "composer": "Modest Mussorgsky",
+  "title": "Pictures at an E",
+  "tags": [
+   "dynamics",
+   "low register",
+   "pedalling",
+   "polyphony",
+   "repeated notes"
+  ],
+  "why": "Pictures at an Exhibition: Bydlo and the Great Gate live in the bass.",
+  "excerpt": [
+   1607.5,
+   40
+  ],
+  "stats": {
+   "duration": 2012.9,
+   "notes": 15841,
+   "max_polyphony": 9,
+   "notes_per_s": 7.9,
+   "peak_notes_2s": 53,
+   "vel_p5": 26,
+   "vel_p95": 100,
+   "repeated_rate": 0.121,
+   "high_share": 0.034,
+   "notes_above_c7": 78,
+   "low_share": 0.099,
+   "notes_below_c2": 831
+  },
+  "pedal": {
+   "cc64": 29592,
+   "half_share": 0.19,
+   "cc67": 1408,
    "cc66": 0
   },
   "corpus": "MAESTRO",
@@ -475,7 +657,9 @@
    "vel_p95": 80,
    "repeated_rate": 0.004,
    "high_share": 0.03,
-   "notes_above_c7": 13
+   "notes_above_c7": 13,
+   "low_share": 0.013,
+   "notes_below_c2": 7
   },
   "pedal": {
    "cc64": 4213,
@@ -511,7 +695,9 @@
    "vel_p95": 97,
    "repeated_rate": 0.151,
    "high_share": 0.004,
-   "notes_above_c7": 1
+   "notes_above_c7": 1,
+   "low_share": 0.043,
+   "notes_below_c2": 61
   },
   "pedal": {
    "cc64": 4586,
@@ -547,7 +733,9 @@
    "vel_p95": 84,
    "repeated_rate": 0.119,
    "high_share": 0.059,
-   "notes_above_c7": 43
+   "notes_above_c7": 43,
+   "low_share": 0.021,
+   "notes_below_c2": 40
   },
   "pedal": {
    "cc64": 3731,
@@ -581,7 +769,9 @@
    "vel_p95": 79,
    "repeated_rate": 0.016,
    "high_share": 0.0,
-   "notes_above_c7": 0
+   "notes_above_c7": 0,
+   "low_share": 0.08,
+   "notes_below_c2": 82
   },
   "pedal": {
    "cc64": 8641,
@@ -617,7 +807,9 @@
    "vel_p95": 99,
    "repeated_rate": 0.152,
    "high_share": 0.045,
-   "notes_above_c7": 75
+   "notes_above_c7": 75,
+   "low_share": 0.068,
+   "notes_below_c2": 301
   },
   "pedal": {
    "cc64": 4904,
@@ -651,7 +843,9 @@
    "vel_p95": 84,
    "repeated_rate": 0.04,
    "high_share": 0.001,
-   "notes_above_c7": 0
+   "notes_above_c7": 0,
+   "low_share": 0.016,
+   "notes_below_c2": 13
   },
   "pedal": {
    "cc64": 3447,

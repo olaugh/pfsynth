@@ -7,10 +7,16 @@
 #include "../../experiments/attack-ptq/patch_attack.h"   /* pf_attack_experiment */
 
 const pf_partial_patch *pf_player_patch(int tone){return tone?&pf_partial_pianoteq:&pf_partial_salamander;}
-void pf_player_defaults(pf_player_options *o){o->tone=1;o->attack=1;o->pedal_mode=1;o->una_corda=1;o->gain=4.0;}
+void pf_player_defaults(pf_player_options *o){o->tone=1;o->attack=1;o->pedal_mode=1;o->una_corda=1;o->gain=4.0;o->body_db=-18;o->knock_db=-22;o->noise_db=-17;o->limiter=1;}   /* onset trims chosen by ear (2026-09-05), see experiments/attack-ptq/listening-trims.json */
+static void apply_trims(pf_player *pl)
+{
+    pl->apatch=pf_attack_experiment;
+    pl->apatch.slow_mix=(float)pow(10,pl->opt.body_db/20);pl->apatch.knock_mix=(float)pow(10,pl->opt.knock_db/20);
+    pl->apatch.noise_mix=(float)(pf_attack_experiment.noise_mix*pow(10,pl->opt.noise_db/20));
+}
 void pf_player_init(pf_player *pl,double sr,const pf_player_options *o)
 {
-    memset(pl,0,sizeof *pl);pl->sr=sr;pl->opt=*o;pf_pedal_defaults(&pl->pedal);
+    memset(pl,0,sizeof *pl);pl->sr=sr;pl->opt=*o;pf_pedal_defaults(&pl->pedal);apply_trims(pl);pl->lim_gain=1;
 }
 static void voice_pedal(pf_player *pl,pf_player_voice *v)
 {
@@ -18,7 +24,7 @@ static void voice_pedal(pf_player *pl,pf_player_voice *v)
 }
 void pf_player_set_options(pf_player *pl,const pf_player_options *o)
 {
-    pl->opt=*o;
+    pl->opt=*o;apply_trims(pl);
     for(int i=0;i<PF_PLAYER_VOICES;i++)if(pl->v[i].used)voice_pedal(pl,&pl->v[i]);
 }
 static void kill_all(pf_player *pl){for(int i=0;i<PF_PLAYER_VOICES;i++)pl->v[i].used=0;}
@@ -62,7 +68,7 @@ static void note_on(pf_player *pl,int note,int vel)
         pf_partial_pedal(&v->p,pl->pedal_pos);
     }else pf_partial_init(&v->p,pf_player_patch(pl->opt.tone),pl->sr,note,velocity);
     v->attack=pl->opt.attack;
-    if(v->attack)pf_attack_init(&v->a,&pf_attack_experiment,pl->sr,note,velocity);
+    if(v->attack)pf_attack_init(&v->a,&pl->apatch,pl->sr,note,velocity);
 }
 static void release_voice(pf_player *pl,pf_player_voice *v){(void)pl;v->sustained=0;pf_partial_release(&v->p);}
 static void note_off(pf_player *pl,int note)
@@ -134,13 +140,25 @@ int pf_player_render(pf_player *pl,float *out,int frames)
             }
             v->level=(float)sqrt(ss/n);
             /* retire voices that have died away (or whose fixed release is long over) */
-            if(v->level<1e-6f&&pl->t-v->start>.5)v->used=0;
+            if(v->level<3e-5f&&pl->t-v->start>.5)v->used=0;   /* ~-90 dBFS: inaudible in any mix; keeps the pool free for real notes */
         }
         done+=n;pl->frames+=n;pl->t=pl->frames/pl->sr;
     }
     for(int i=0;i<PF_PLAYER_VOICES;i++)active+=pl->v[i].used;
+    /* Makeup gain, then (live only) a peak limiter: the block's own peak is the lookahead, gain
+     * reduction is instant with a 250 ms release and ramped over the first 32 samples, and a hard
+     * clamp remains as a safety net.  No waveshaping: a tanh here distorted every fff chord.
+     * Offline renders switch the limiter off and normalize the float mix afterwards. */
     double g=pl->opt.gain;
-    for(int k=0;k<frames;k++){double x=out[k]*g;out[k]=(float)(x<-3?-1:x>3?1:tanh(x));}
+    if(pl->opt.limiter){
+        double peak=0;for(int k=0;k<frames;k++){double a=fabs(out[k])*g;if(a>peak)peak=a;}
+        const double thr=.95;double target=peak>thr?thr/peak:1,prev=pl->lim_gain;
+        if(target<prev)pl->lim_gain=target;else pl->lim_gain=prev+(1-prev)*(1-exp(-frames/(pl->sr*.25)));
+        for(int k=0;k<frames;k++){
+            double lg=k<32?prev+(pl->lim_gain-prev)*(k/32.0):pl->lim_gain;
+            double x=out[k]*g*lg;out[k]=(float)(x<-1?-1:x>1?1:x);
+        }
+    }else for(int k=0;k<frames;k++)out[k]*=(float)g;
     return active;
 }
 int pf_player_sounding(const pf_player *pl,unsigned char keys[128])

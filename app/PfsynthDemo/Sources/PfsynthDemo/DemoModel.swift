@@ -18,6 +18,8 @@ final class DemoModel: ObservableObject {
     @Published var exportProgress = 0.0
     @Published var tagFilter: String? = nil
     @Published var activeVoices = 0
+    @Published var dspLoad = 0.0
+    @Published var dspPeak = 0.0
 
     let synth = Synth()
     private let engine = AVAudioEngine()
@@ -77,7 +79,7 @@ final class DemoModel: ObservableObject {
     func stop() { pause(); synth.seek(excerptIn); time = excerptIn; sounding = Array(repeating: false, count: 128) }
     func seek(_ t: Double) { synth.seek(t); time = t; sounding = synth.soundingKeys() }
     private func tick() {
-        time = synth.time; sounding = synth.soundingKeys(); activeVoices = synth.activeVoices
+        time = synth.time; sounding = synth.soundingKeys(); activeVoices = synth.activeVoices; dspLoad = synth.load; dspPeak = synth.loadPeak
         if synth.finished || time >= excerptOut { pause(); time = excerptOut }
     }
     func setIn() { excerptIn = min(time, excerptOut - 0.5) ; if time < excerptIn { seek(excerptIn) } }

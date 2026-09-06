@@ -21,7 +21,7 @@ static void wav_write(const char *path,const float *x,long n,int sr)
 int main(int argc,char **argv)
 {
     if(argc<3){fprintf(stderr,"usage: pfrender in.mid out.wav [start [end]] [--tone sal|ptq] [--no-attack] [--pedal binary|continuous] [--no-soft] [--gain x] [--raw]\n");return 2;}
-    pf_player_options o;pf_player_defaults(&o);double start=0,end=-1;int raw=0,pos=0;
+    pf_player_options o;pf_player_defaults(&o);o.gain=1;o.limiter=0;double start=0,end=-1;int raw=0,pos=0;
     for(int i=3;i<argc;i++){
         if(!strcmp(argv[i],"--tone")&&i+1<argc)o.tone=!strcmp(argv[++i],"ptq");
         else if(!strcmp(argv[i],"--no-attack"))o.attack=0;

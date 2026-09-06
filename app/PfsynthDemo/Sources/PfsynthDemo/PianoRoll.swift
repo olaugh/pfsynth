@@ -53,12 +53,11 @@ struct RollRenderer {
             if n.end < t0 - 0.05 || n.start > t1 { if n.start > t1 { break } else { continue } }
             let x0 = max(x(n.start), rollX0), x1 = min(x(n.end), W); if x1 <= x0 { continue }
             let live = n.start <= s.time && s.time <= n.end + 0.05
-            let v = CGFloat(n.velocity) / 127
-            let hue = 0.55 - 0.35 * v   // quiet = blue, loud = orange
-            let color = live ? NSColor(hue: hue, saturation: 0.9, brightness: 1.0, alpha: 1).cgColor : NSColor(hue: hue, saturation: 0.75, brightness: 0.45 + 0.45 * v, alpha: 0.95).cgColor
-            ctx.setFillColor(color)
+            let (r, g, b) = RollRenderer.velocityColor(n.velocity)
+            ctx.setFillColor(live ? CGColor(red: min(1, r + 0.35), green: min(1, g + 0.35), blue: min(1, b + 0.35), alpha: 1) : CGColor(red: r, green: g, blue: b, alpha: 0.95))
             let rect = CGRect(x: x0, y: y(n.pitch) + 0.5, width: max(x1 - x0, 2), height: max(kh - 1, 1))
             ctx.addPath(CGPath(roundedRect: rect, cornerWidth: 1.5, cornerHeight: 1.5, transform: nil)); ctx.fillPath()
+            if live { ctx.setStrokeColor(CGColor(gray: 1, alpha: 0.9)); ctx.setLineWidth(1); ctx.stroke(rect.insetBy(dx: 0.5, dy: 0.5)) }
         }
         // playhead
         ctx.setStrokeColor(CGColor(gray: 1, alpha: 0.9)); ctx.setLineWidth(1.5); ctx.move(to: CGPoint(x: phx, y: rollY0)); ctx.addLine(to: CGPoint(x: phx, y: H)); ctx.strokePath()
@@ -84,6 +83,18 @@ struct RollRenderer {
         label(ctx, "soft", at: CGPoint(x: 6, y: laneY + 18), size: 10, color: CGColor(red: 1, green: 0.65, blue: 0.2, alpha: 1))
         label(ctx, "sost.", at: CGPoint(x: 6, y: laneY + 32), size: 10, color: CGColor(red: 0.6, green: 1, blue: 0.5, alpha: 1))
         if !s.title.isEmpty { label(ctx, s.title, at: CGPoint(x: kbW + 8, y: 5), size: 13, color: CGColor(gray: 1, alpha: 0.85), bold: true) }
+        // velocity legend, top right
+        let lw: CGFloat = 120, lx = W - lw - 40, ly: CGFloat = 8
+        for i in 0..<24 { let (r, g, b) = RollRenderer.velocityColor(Int(20 + Double(i) / 23 * 100)); ctx.setFillColor(CGColor(red: r, green: g, blue: b, alpha: 1)); ctx.fill(CGRect(x: lx + CGFloat(i) * lw / 24, y: ly, width: lw / 24 + 0.5, height: 8)) }
+        label(ctx, "pp", at: CGPoint(x: lx - 16, y: ly - 3), size: 9, color: CGColor(gray: 1, alpha: 0.6)); label(ctx, "ff", at: CGPoint(x: lx + lw + 4, y: ly - 3), size: 9, color: CGColor(gray: 1, alpha: 0.6))
+    }
+    /// pp -> ff: blue, cyan, green, yellow, red over MIDI velocity 20..120.
+    static func velocityColor(_ velocity: Int) -> (CGFloat, CGFloat, CGFloat) {
+        let stops: [(CGFloat, CGFloat, CGFloat)] = [(0.25, 0.45, 1.0), (0.2, 0.85, 0.95), (0.35, 0.9, 0.35), (1.0, 0.85, 0.2), (1.0, 0.25, 0.15)]
+        let t = min(max((CGFloat(velocity) - 20) / 100, 0), 1) * CGFloat(stops.count - 1)
+        let i = min(Int(t), stops.count - 2), f = t - CGFloat(i)
+        let a = stops[i], b = stops[i + 1]
+        return (a.0 + (b.0 - a.0) * f, a.1 + (b.1 - a.1) * f, a.2 + (b.2 - a.2) * f)
     }
     private func drawCurve(_ ctx: CGContext, _ pts: [PedalPoint], x: (Double) -> CGFloat, laneY: CGFloat, laneH: CGFloat, fill: CGColor?, stroke: CGColor, t0: Double, t1: Double, rollX0: CGFloat, W: CGFloat) {
         guard !pts.isEmpty else { return }

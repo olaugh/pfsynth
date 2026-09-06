@@ -9,9 +9,10 @@ struct SongData {
     static let empty = SongData()
 }
 struct SynthOptions: Equatable {
-    var pianoteqTone = true; var attack = true; var continuousPedal = true; var unaCorda = true; var gainDb = 12.0
+    var pianoteqTone = true; var attack = true; var continuousPedal = true; var unaCorda = true; var gainDb = 6.0
+    var bodyDb = -18.0, knockDb = -22.0, noiseDb = -17.0   // onset trims relative to the fit, chosen by ear on 2026-09-05 (experiments/attack-ptq/listening-trims.json)
     var c: pf_player_options {
-        pf_player_options(tone: pianoteqTone ? 1 : 0, attack: attack ? 1 : 0, pedal_mode: continuousPedal ? 1 : 0, una_corda: unaCorda ? 1 : 0, gain: pow(10, gainDb / 20))
+        pf_player_options(tone: pianoteqTone ? 1 : 0, attack: attack ? 1 : 0, pedal_mode: continuousPedal ? 1 : 0, una_corda: unaCorda ? 1 : 0, gain: pow(10, gainDb / 20), body_db: bodyDb, knock_db: knockDb, noise_db: noiseDb, limiter: 1)
     }
 }
 enum SynthError: Error, LocalizedError {
@@ -49,6 +50,8 @@ final class Synth {
     private var opts = SynthOptions().c
     var endTime: Double = .infinity
     private(set) var finished = false
+    /// DSP load: fraction of the audio callback's time budget spent rendering (smoothed) and its recent peak; > 1 means dropouts.
+    private(set) var load = 0.0, loadPeak = 0.0; private var peakAge = 0
 
     init() { pf_player_init(player, Synth.sampleRate, &opts) }
     deinit { if loaded { pf_midi_free(&song) }; player.deallocate() }
@@ -80,7 +83,11 @@ final class Synth {
             return
         }
         if mono.count < frames { mono = [Float](repeating: 0, count: frames) }
+        let t0 = DispatchTime.now().uptimeNanoseconds
         mono.withUnsafeMutableBufferPointer { _ = pf_player_render(player, $0.baseAddress, Int32(frames)) }
+        let used = Double(DispatchTime.now().uptimeNanoseconds - t0) / 1e9 / (Double(frames) / Synth.sampleRate)
+        load += (used - load) * 0.2
+        if used >= loadPeak { loadPeak = used; peakAge = 0 } else { peakAge += 1; if peakAge > 90 { loadPeak = max(used, loadPeak * 0.98) } }   // ~2 s hold, then decay
         for i in 0..<frames { left[i] = mono[i]; right[i] = mono[i] }
     }
 }
@@ -93,7 +100,7 @@ final class OfflineRenderer {
     private(set) var rendered = 0
     init(url: URL, start: Double, end: Double, options: SynthOptions) throws {
         guard pf_midi_load(&song, url.path) == 0 else { throw SynthError.load(url.lastPathComponent) }
-        var o = options.c
+        var o = options.c; o.gain = 1; o.limiter = 0   // offline: float headroom, normalized afterwards
         pf_player_init(player, Synth.sampleRate, &o)
         pf_player_load(player, song.ev, song.n, song.duration)
         self.start = max(0, start); self.end = min(end, song.duration)

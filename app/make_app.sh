@@ -2,7 +2,9 @@
 # Build the demo and wrap it as PfsynthDemo.app (SwiftPM has no app-bundle step).
 set -e
 cd "$(dirname "$0")/PfsynthDemo"
-swift build -c release 2>&1 | grep -E "error|Compiling|Build complete" | grep -v "^\[" || true
+LOG=$(mktemp); swift build -c release >"$LOG" 2>&1; STATUS=$?
+grep -E "error:|Build complete" "$LOG" | grep -v "^\[" || true; rm -f "$LOG"
+[ $STATUS -eq 0 ] || { echo "build failed"; exit 1; }
 BIN=.build/release/PfsynthDemo; [ -x "$BIN" ] || { echo "build failed"; exit 1; }
 APP=../PfsynthDemo.app; rm -rf "$APP"; mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/PfsynthDemo"

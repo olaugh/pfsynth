@@ -40,13 +40,27 @@ struct ContentView: View {
                 Text(p.why).font(.callout).foregroundStyle(.secondary)
                 HStack(spacing: 14) {
                     stat("max polyphony", "\(p.stats.max_polyphony)"); stat("peak notes / 2 s", "\(p.stats.peak_notes_2s)"); stat("velocity", "\(p.stats.vel_p5)–\(p.stats.vel_p95)")
-                    stat("repeated notes", String(format: "%.0f%%", p.stats.repeated_rate * 100)); stat("above F6", String(format: "%.0f%%", (p.stats.high_share ?? 0) * 100)); stat("half pedal", String(format: "%.0f%%", p.pedal.half_share * 100)); stat("soft-pedal moves", "\(p.pedal.cc67)"); if p.pedal.cc66 > 0 { stat("sostenuto", "\(p.pedal.cc66)") }
-                    Spacer(); stat("voices", "\(m.activeVoices)")
+                    stat("repeated notes", String(format: "%.0f%%", p.stats.repeated_rate * 100)); stat("above F6", String(format: "%.0f%%", (p.stats.high_share ?? 0) * 100)); stat("at/below E2", String(format: "%.0f%%", (p.stats.low_share ?? 0) * 100)); stat("half pedal", String(format: "%.0f%%", p.pedal.half_share * 100)); stat("soft-pedal moves", "\(p.pedal.cc67)"); if p.pedal.cc66 > 0 { stat("sostenuto", "\(p.pedal.cc66)") }
+                    Spacer(); stat("voices", "\(m.activeVoices)"); loadMeter
                 }.font(.caption)
             } else { Text("pfsynth piano demo").font(.title2.bold()); Text("Pick a piece on the left. Space plays, ⌘. stops.").foregroundStyle(.secondary) }
         }
     }
     func stat(_ k: String, _ v: String) -> some View { HStack(spacing: 4) { Text(k).foregroundStyle(.secondary); Text(v).monospacedDigit().bold() } }
+    /// Real-time headroom: render time as a share of the audio callback's budget. Above 100% the buffer underruns (crackle).
+    var loadMeter: some View {
+        let load = m.dspLoad, peak = m.dspPeak
+        let color: Color = peak > 0.85 ? .red : peak > 0.6 ? .orange : .green
+        return HStack(spacing: 6) {
+            Text("DSP load").foregroundStyle(.secondary)
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 2).fill(Color.secondary.opacity(0.2)).frame(width: 90, height: 8)
+                RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 90 * min(load, 1), height: 8)
+                Rectangle().fill(Color.primary.opacity(0.7)).frame(width: 1.5, height: 10).offset(x: 90 * min(peak, 1))
+            }
+            Text(String(format: "%.0f%% · peak %.0f%%", load * 100, peak * 100)).monospacedDigit().foregroundStyle(color)
+        }.help("Share of each audio buffer's time spent rendering; at 100% playback drops out")
+    }
     var transport: some View {
         VStack(spacing: 6) {
             HStack(spacing: 12) {
@@ -72,11 +86,17 @@ struct ContentView: View {
             Text("Model").font(.headline)
             Picker("Tone", selection: $m.options.pianoteqTone) { Text("Salamander-fitted").tag(false); Text("Pianoteq-fitted").tag(true) }.pickerStyle(.segmented).frame(width: 300)
             Toggle("Onset (soundboard thump + noise)", isOn: $m.options.attack)
+            Group {
+                trim("Body (slow modes)", $m.options.bodyDb); trim("Knock (fast modes)", $m.options.knockDb); trim("Noise burst", $m.options.noiseDb)
+            }.disabled(!m.options.attack).padding(.leading, 18)
             Picker("Sustain pedal", selection: $m.options.continuousPedal) { Text("Binary").tag(false); Text("Continuous damper").tag(true) }.pickerStyle(.segmented).frame(width: 300)
             Toggle("Una corda from CC67", isOn: $m.options.unaCorda).disabled(!m.options.continuousPedal)
-            HStack { Text("Gain"); Slider(value: $m.options.gainDb, in: -6...24).frame(width: 180); Text(String(format: "%+.0f dB", m.options.gainDb)).monospacedDigit() }
+            HStack { Text("Gain"); Slider(value: $m.options.gainDb, in: -6...18).frame(width: 180); Text(String(format: "%+.0f dB", m.options.gainDb)).monospacedDigit(); Text("live only · limiter, no clipping · exports are normalized").font(.caption).foregroundStyle(.tertiary) }
             Text("Changes to tone and onset apply to the next notes; pedal changes apply immediately.").font(.caption).foregroundStyle(.tertiary)
         }
+    }
+    func trim(_ label: String, _ value: Binding<Double>) -> some View {
+        HStack { Text(label).frame(width: 130, alignment: .leading); Slider(value: value, in: -24...6).frame(width: 150); Text(value.wrappedValue <= -24 ? "off" : String(format: "%+.0f dB", value.wrappedValue)).monospacedDigit().frame(width: 52, alignment: .trailing) }.font(.callout)
     }
     var exportPanel: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -87,5 +107,5 @@ struct ContentView: View {
             Text("Audio is peak-normalized to −1 dBFS. Video: 1280×720, 30 fps, H.264 + AAC.").font(.caption).foregroundStyle(.tertiary)
         }
     }
-    func color(for tag: String) -> Color { switch tag { case "polyphony": return .purple; case "pedalling": return .blue; case "dynamics": return .orange; case "repeated notes": return .green; case "high register": return .pink; default: return .gray } }
+    func color(for tag: String) -> Color { switch tag { case "polyphony": return .purple; case "pedalling": return .blue; case "dynamics": return .orange; case "repeated notes": return .green; case "high register": return .pink; case "low register": return .brown; default: return .gray } }
 }

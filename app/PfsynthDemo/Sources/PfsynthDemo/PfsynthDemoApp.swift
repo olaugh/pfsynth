@@ -1,7 +1,7 @@
 import SwiftUI
 import PfsynthCore
 
-/// Headless use:  PfsynthDemo --export <in.mid> <out.mp3|m4a|mp4> [start end] [--salamander] [--no-attack] [--binary-pedal] [--no-soft] [--gain dB]
+/// Headless use:  PfsynthDemo --export <in.mid> <out.mp3|m4a|mp4> [start end] [--salamander] [--no-attack] [--binary-pedal] [--no-soft] [--gain dB] [--body dB] [--knock dB] [--noise dB]
 func runCommandLineIfRequested() {
     let a = CommandLine.arguments
     guard let i = a.firstIndex(of: "--export"), a.count > i + 2 else { return }
@@ -13,7 +13,10 @@ func runCommandLineIfRequested() {
     var it = rest.makeIterator()
     while let f = it.next() {
         switch f { case "--salamander": o.pianoteqTone = false; case "--no-attack": o.attack = false; case "--binary-pedal": o.continuousPedal = false; case "--no-soft": o.unaCorda = false
-        case "--gain": if let g = it.next(), let v = Double(g) { o.gainDb = v }; default: break }
+        case "--gain": if let g = it.next(), let v = Double(g) { o.gainDb = v }
+        case "--body": if let g = it.next(), let v = Double(g) { o.bodyDb = v }
+        case "--knock": if let g = it.next(), let v = Double(g) { o.knockDb = v }
+        case "--noise": if let g = it.next(), let v = Double(g) { o.noiseDb = v }; default: break }
     }
     guard let fmt = ExportFormat.allCases.first(where: { $0.ext == out.pathExtension.lowercased() }) else { FileHandle.standardError.write("unknown output type \(out.pathExtension)\n".data(using: .utf8)!); exit(2) }
     do {
