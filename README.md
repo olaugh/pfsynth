@@ -1,5 +1,7 @@
 # pfsynth
 
+**Web demo:** https://olaugh.github.io/pfsynth/ — the partial-model piano as WebAssembly, playing (n)ASAP performances with Verovio score following (`docs/`).
+
 ## License
 
 pfsynth is released under the MIT License (see `LICENSE`).

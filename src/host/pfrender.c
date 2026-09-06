@@ -20,8 +20,9 @@ static void wav_write(const char *path,const float *x,long n,int sr)
 }
 int main(int argc,char **argv)
 {
-    if(argc<3){fprintf(stderr,"usage: pfrender in.mid out.wav [start [end]] [--tone sal|ptq] [--no-attack] [--pedal binary|continuous] [--no-soft] [--gain x] [--raw]\n");return 2;}
+    if(argc<3){fprintf(stderr,"usage: pfrender in.mid out.wav [start [end]] [--tone sal|ptq] [--no-attack] [--pedal binary|continuous] [--no-soft] [--gain x] [--raw] [--body dB] [--knock dB] [--noise dB] [--no-resonance] [--resonance-db dB] [--res-coupling dB] [--res-skirt Hz] [--res-sustain dB] [--res-tilt dB/oct] [--res-partials n] [--res-t60 x]\n");return 2;}
     pf_player_options o;pf_player_defaults(&o);o.gain=1;o.limiter=0;double start=0,end=-1;int raw=0,pos=0;
+    pf_resonance_params rp;pf_resonance_defaults(&rp);
     for(int i=3;i<argc;i++){
         if(!strcmp(argv[i],"--tone")&&i+1<argc)o.tone=!strcmp(argv[++i],"ptq");
         else if(!strcmp(argv[i],"--no-attack"))o.attack=0;
@@ -29,12 +30,23 @@ int main(int argc,char **argv)
         else if(!strcmp(argv[i],"--no-soft"))o.una_corda=0;
         else if(!strcmp(argv[i],"--gain")&&i+1<argc)o.gain=atof(argv[++i]);
         else if(!strcmp(argv[i],"--raw"))raw=1;
+        else if(!strcmp(argv[i],"--body")&&i+1<argc)o.body_db=atof(argv[++i]);
+        else if(!strcmp(argv[i],"--knock")&&i+1<argc)o.knock_db=atof(argv[++i]);
+        else if(!strcmp(argv[i],"--noise")&&i+1<argc)o.noise_db=atof(argv[++i]);
+        else if(!strcmp(argv[i],"--no-resonance"))o.resonance=0;
+        else if(!strcmp(argv[i],"--resonance-db")&&i+1<argc)o.resonance_db=atof(argv[++i]);
+        else if(!strcmp(argv[i],"--res-coupling")&&i+1<argc)rp.coupling_db=(float)atof(argv[++i]);
+        else if(!strcmp(argv[i],"--res-skirt")&&i+1<argc)rp.skirt_hz=(float)atof(argv[++i]);
+        else if(!strcmp(argv[i],"--res-sustain")&&i+1<argc)rp.sustain_db=(float)atof(argv[++i]);
+        else if(!strcmp(argv[i],"--res-tilt")&&i+1<argc)rp.tilt_db=(float)atof(argv[++i]);
+        else if(!strcmp(argv[i],"--res-partials")&&i+1<argc)rp.partials=atoi(argv[++i]);
+        else if(!strcmp(argv[i],"--res-t60")&&i+1<argc)rp.t60_scale=(float)atof(argv[++i]);
         else if(pos==0){start=atof(argv[i]);pos++;}
         else if(pos==1){end=atof(argv[i]);pos++;}
     }
     pf_song song;if(pf_midi_load(&song,argv[1]))return 1;
     if(end<0||end>song.duration)end=song.duration;
-    int sr=44100;static pf_player pl;pf_player_init(&pl,sr,&o);pf_player_load(&pl,song.ev,song.n,song.duration);pf_player_seek(&pl,start);
+    int sr=44100;static pf_player pl;pf_player_init(&pl,sr,&o);pf_player_set_resonance(&pl,&rp);pf_player_load(&pl,song.ev,song.n,song.duration);pf_player_seek(&pl,start);
     long n=(long)((end-start)*sr);float *buf=(float*)calloc((size_t)n,sizeof(float));if(!buf)return 1;
     clock_t c0=clock();int maxv=0;
     for(long i=0;i<n;i+=512){int m=(int)(n-i<512?n-i:512);int a=pf_player_render(&pl,buf+i,m);if(a>maxv)maxv=a;}

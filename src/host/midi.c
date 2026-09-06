@@ -140,26 +140,13 @@ static void parse_track(raw_list *L, const unsigned char *body, unsigned long le
     }
 }
 
-int pf_midi_load(pf_song *song, const char *path)
+int pf_midi_parse(pf_song *song, const unsigned char *buf, long fsize)
 {
     song->ev = NULL; song->n = 0; song->duration = 0.0;
-
-    FILE *f = fopen(path, "rb");
-    if (!f) { fprintf(stderr, "midi: cannot open %s\n", path); return 1; }
-    fseek(f, 0, SEEK_END);
-    long fsize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    if (fsize <= 14) { fclose(f); fprintf(stderr, "midi: too small\n"); return 1; }
-    unsigned char *buf = (unsigned char *)malloc((size_t)fsize);
-    if (fread(buf, 1, (size_t)fsize, f) != (size_t)fsize) {
-        fclose(f); free(buf); fprintf(stderr, "midi: short read\n"); return 1;
-    }
-    fclose(f);
+    if (fsize <= 14) { fprintf(stderr, "midi: too small\n"); return 1; }
 
     reader r = { buf, buf + fsize, 1 };
-    if (memcmp(r.p, "MThd", 4) != 0) {
-        free(buf); fprintf(stderr, "midi: not an SMF\n"); return 1;
-    }
+    if (memcmp(r.p, "MThd", 4) != 0) { fprintf(stderr, "midi: not an SMF\n"); return 1; }
     r.p += 4;
     unsigned long hlen = rd_u32(&r);
     rd_u16(&r);                              /* format (0/1, both handled) */
@@ -167,7 +154,7 @@ int pf_midi_load(pf_song *song, const char *path)
     int division = (int)rd_u16(&r);
     r.p += (hlen > 6) ? (long)(hlen - 6) : 0;
     if (division <= 0) {                     /* SMPTE timecode unsupported */
-        free(buf); fprintf(stderr, "midi: SMPTE timing unsupported\n"); return 1;
+        fprintf(stderr, "midi: SMPTE timing unsupported\n"); return 1;
     }
 
     raw_list L = { NULL, 0, 0 };
@@ -181,7 +168,6 @@ int pf_midi_load(pf_song *song, const char *path)
         parse_track(&L, body, tlen, &order);
         r.p = body + tlen;
     }
-    free(buf);
 
     if (L.n == 0) { free(L.a); fprintf(stderr, "midi: no events\n"); return 1; }
 
@@ -209,6 +195,25 @@ int pf_midi_load(pf_song *song, const char *path)
     song->n  = nout;
     song->duration = (nout ? out[nout - 1].t : 0.0) + 4.0;  /* ring-out tail */
     return 0;
+}
+
+int pf_midi_load(pf_song *song, const char *path)
+{
+    song->ev = NULL; song->n = 0; song->duration = 0.0;
+    FILE *f = fopen(path, "rb");
+    if (!f) { fprintf(stderr, "midi: cannot open %s\n", path); return 1; }
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (fsize <= 0) { fclose(f); fprintf(stderr, "midi: empty\n"); return 1; }
+    unsigned char *buf = (unsigned char *)malloc((size_t)fsize);
+    if (fread(buf, 1, (size_t)fsize, f) != (size_t)fsize) {
+        fclose(f); free(buf); fprintf(stderr, "midi: short read\n"); return 1;
+    }
+    fclose(f);
+    int rc = pf_midi_parse(song, buf, fsize);
+    free(buf);
+    return rc;
 }
 
 void pf_midi_free(pf_song *song)

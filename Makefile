@@ -106,7 +106,7 @@ decay: src/host/decay.c src/host/wav.c | $(BUILD)
 	@echo "run with: ./$(BUILD)/decay <a.wav> <b.wav>"
 
 # demo-app support: portable player + CLI renderer (partial model + onset + pedal model)
-pfrender: src/core/pf_partial.c src/core/pf_attack.c src/host/midi.c src/host/pfplayer.c src/host/pfrender.c
+pfrender: src/core/pf_partial.c src/core/pf_attack.c src/core/pf_resonance.c src/host/midi.c src/host/pfplayer.c src/host/pfrender.c
 	$(CC) -O2 -std=c99 -Wall -o build/pfrender $^ -lm
 app:
 	./app/make_app.sh

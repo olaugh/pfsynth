@@ -1,0 +1,13 @@
+{
+ "args": [
+  "--res-coupling",
+  "-32",
+  "--res-skirt",
+  "1.5",
+  "--res-sustain",
+  "-15",
+  "--res-tilt",
+  "0"
+ ],
+ "error": 164.87987211305696
+}

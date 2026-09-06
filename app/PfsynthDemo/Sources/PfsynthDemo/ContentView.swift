@@ -2,13 +2,21 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var m: DemoModel
+    @State private var settingsQuery = ""
+    @FocusState private var settingsFocused: Bool
+    @FocusState private var searchFocused: Bool
     var body: some View {
         NavigationSplitView {
             VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                    TextField("Search pieces by composer or title", text: $m.searchText).textFieldStyle(.plain).focused($searchFocused)
+                    if !m.searchText.isEmpty { Button { m.searchText = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }.buttonStyle(.plain) }
+                }.padding(6).background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.06))).padding(.horizontal, 10).padding(.top, 8)
                 Picker("Challenge", selection: $m.tagFilter) {
                     Text("All").tag(String?.none)
                     ForEach(Library.tags, id: \.self) { Text($0.capitalized).tag(String?.some($0)) }
-                }.pickerStyle(.menu).padding(.horizontal, 10).padding(.top, 8)
+                }.pickerStyle(.menu).padding(.horizontal, 10)
                 List(m.filtered, selection: Binding(get: { m.selection }, set: { new in
                     // Only record the selection here; loading publishes many changes and must not
                     // happen inside the list's selection callback (it re-enters until the stack overflows).
@@ -32,6 +40,7 @@ struct ContentView: View {
                 HStack(alignment: .top, spacing: 24) { optionsPanel; Divider(); exportPanel }.padding(.bottom, 6)
             }.padding(14)
         }
+        .background { Button("") { settingsFocused = true }.keyboardShortcut("k", modifiers: .command).hidden(); Button("") { searchFocused = true }.keyboardShortcut("f", modifiers: .command).hidden() }
     }
     var header: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -81,22 +90,80 @@ struct ContentView: View {
             }.font(.callout)
         }
     }
-    var optionsPanel: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Model").font(.headline)
-            Picker("Tone", selection: $m.options.pianoteqTone) { Text("Salamander-fitted").tag(false); Text("Pianoteq-fitted").tag(true) }.pickerStyle(.segmented).frame(width: 300)
-            Toggle("Onset (soundboard thump + noise)", isOn: $m.options.attack)
-            Group {
-                trim("Body (slow modes)", $m.options.bodyDb); trim("Knock (fast modes)", $m.options.knockDb); trim("Noise burst", $m.options.noiseDb)
-            }.disabled(!m.options.attack).padding(.leading, 18)
-            Picker("Sustain pedal", selection: $m.options.continuousPedal) { Text("Binary").tag(false); Text("Continuous damper").tag(true) }.pickerStyle(.segmented).frame(width: 300)
-            Toggle("Una corda from CC67", isOn: $m.options.unaCorda).disabled(!m.options.continuousPedal)
-            HStack { Text("Gain"); Slider(value: $m.options.gainDb, in: -6...18).frame(width: 180); Text(String(format: "%+.0f dB", m.options.gainDb)).monospacedDigit(); Text("live only · limiter, no clipping · exports are normalized").font(.caption).foregroundStyle(.tertiary) }
-            Text("Changes to tone and onset apply to the next notes; pedal changes apply immediately.").font(.caption).foregroundStyle(.tertiary)
-        }
+    // MARK: settings palette — every control with its known-good default; the search field filters rows across sections
+    func show(_ keywords: String) -> Bool {
+        let words = settingsQuery.lowercased().split(separator: " ").map(String.init)
+        return words.allSatisfy { keywords.lowercased().contains($0) }
     }
-    func trim(_ label: String, _ value: Binding<Double>) -> some View {
-        HStack { Text(label).frame(width: 130, alignment: .leading); Slider(value: value, in: -24...6).frame(width: 150); Text(value.wrappedValue <= -24 ? "off" : String(format: "%+.0f dB", value.wrappedValue)).monospacedDigit().frame(width: 52, alignment: .trailing) }.font(.callout)
+    var searching: Bool { !settingsQuery.trimmingCharacters(in: .whitespaces).isEmpty }
+    var optionsPanel: some View {
+        let d = SynthOptions()
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text("Settings").font(.headline)
+                HStack(spacing: 4) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                    TextField("Search settings (⌘K)", text: $settingsQuery).textFieldStyle(.plain).focused($settingsFocused)
+                    if searching { Button { settingsQuery = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }.buttonStyle(.plain) }
+                }.padding(4).background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.06))).frame(width: 220)
+                Button("Reset all") { m.options = SynthOptions() }.disabled(m.options == d).font(.callout)
+            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 6) {
+                    section("Sound", "sound gain resonance sympathetic") {
+                        if show("gain volume level sound") { slider("Gain", $m.options.gainDb, d.gainDb, -6...18, "%+.0f dB", "live only; the limiter prevents clipping and exports are normalized") }
+                        if show("sympathetic resonance strings pedal halo sound") { toggle("Sympathetic resonance", $m.options.resonance, d.resonance, "undamped strings ring in sympathy: pedal down, held keys, the top 1.5 octaves (prototype, fitted to Pianoteq)") }
+                        if show("sympathetic resonance level halo sound") { slider("Resonance level", $m.options.resonanceDb, d.resonanceDb, -24...12, "%+.0f dB", "0 dB = as fitted: other strings' partials 20–28 dB under the note").disabled(!m.options.resonance) }
+                    }
+                    section("Onset", "onset attack thump body knock noise soundboard") {
+                        if show("onset layer attack soundboard thump noise") { toggle("Onset layer", $m.options.attack, d.attack, "soundboard thump, knock modes and hammer noise at every note-on") }
+                        Group {
+                            if show("body slow modes soundboard thump onset") { slider("Body (slow modes)", $m.options.bodyDb, d.bodyDb, -24...6, "%+.0f dB", "low body/room modes 59–450 Hz; ear-chosen −18") }
+                            if show("knock fast modes click onset") { slider("Knock (fast modes)", $m.options.knockDb, d.knockDb, -24...6, "%+.0f dB", "fast soundboard modes to 2.8 kHz: the percussive click") }
+                            if show("noise burst hammer hiss onset") { slider("Noise burst", $m.options.noiseDb, d.noiseDb, -24...6, "%+.0f dB", "filtered noise between the partials in the first tens of ms") }
+                        }.disabled(!m.options.attack)
+                    }
+                    section("Pedals", "pedal sustain damper half una corda soft sostenuto") {
+                        if show("continuous damper half pedaling sustain pedal cc64") { toggle("Continuous damper (half pedaling)", $m.options.continuousPedal, d.continuousPedal, "the damper follows the raw CC64 value; off = binary sustain with a fixed release (legacy)") }
+                        if show("una corda soft pedal cc67") { toggle("Una corda from CC67", $m.options.unaCorda, d.unaCorda, "−2.1 dB on the fundamental, +1.7 dB/octave of partial index, slower fundamental decay").disabled(!m.options.continuousPedal) }
+                    }
+                    section("Experimental", "experimental resonance coupling skirt sustain tilt decay", collapsed: true, hint: "Sympathetic-resonance internals (fitted to lone notes, pedal down vs up). Changing one rebuilds the bank.") {
+                        if show("resonance coupling experimental") { slider("Resonance coupling", $m.options.resCoupling, d.resCoupling, -50...(-10), "%+.0f dB", "free amplitude of a coincident string partial re the note's partial") }
+                        if show("resonance skirt width hz experimental") { slider("Resonance skirt", $m.options.resSkirt, d.resSkirt, 0.5...16, "%.1f Hz", "how far from a played partial a string still gets excited") }
+                        if show("resonance sustain bound driven experimental") { slider("Resonance sustain bound", $m.options.resSustain, d.resSustain, -40...0, "%+.0f dB", "cap on the driven build-up of a string sitting on a played partial") }
+                        if show("resonance tilt octave experimental") { slider("Resonance tilt", $m.options.resTilt, d.resTilt, -12...6, "%+.1f dB/oct", "coupling change per octave above 250 Hz") }
+                        if show("resonance decay scale t60 experimental") { slider("Resonance decay scale", $m.options.resT60, d.resT60, 0.25...4, "%.2f ×", "multiplies the sympathetic strings' free decay times") }
+                    }
+                    section("Legacy", "legacy salamander tone binary pedal", collapsed: true, hint: "Earlier behaviour kept for A/B listening; not the known-good path.") {
+                        if show("salamander tone patch legacy pianoteq") { toggle("Salamander-fitted tone", Binding(get: { !m.options.pianoteqTone }, set: { m.options.pianoteqTone = !$0 }), !d.pianoteqTone, "the frozen 2026-09-04 baseline patch instead of the Pianoteq-fitted one") }
+                        if show("binary sustain pedal legacy release") { toggle("Binary sustain pedal", Binding(get: { !m.options.continuousPedal }, set: { m.options.continuousPedal = !$0 }), !d.continuousPedal, "CC64 ≥ 64 holds, else a fixed 240 ms release") }
+                    }
+                }.padding(.trailing, 6)
+            }.frame(maxHeight: 250)
+            Text("Tone and onset changes apply to the next notes; pedal and resonance changes apply immediately.").font(.caption).foregroundStyle(.tertiary)
+        }.frame(minWidth: 520)
+    }
+    @ViewBuilder func section<Content: View>(_ title: String, _ keywords: String, collapsed: Bool = false, hint: String? = nil, @ViewBuilder content: () -> Content) -> some View {
+        let _ = keywords
+        let body = content()
+        DisclosureGroup(isExpanded: Binding(get: { searching || (collapsed ? expanded.contains(title) : !expanded.contains(title)) }, set: { v in if v == collapsed { expanded.insert(title) } else { expanded.remove(title) } })) {
+            VStack(alignment: .leading, spacing: 4) { if let h = hint { Text(h).font(.caption).foregroundStyle(.secondary) }; body }.padding(.leading, 4).padding(.top, 2)
+        } label: { Text(title).font(.subheadline.bold()).foregroundStyle(collapsed ? .secondary : .primary) }
+    }
+    @State private var expanded: Set<String> = []
+    func slider(_ label: String, _ value: Binding<Double>, _ def: Double, _ range: ClosedRange<Double>, _ fmt: String, _ help: String) -> some View {
+        HStack(spacing: 8) {
+            Text(label).frame(width: 190, alignment: .leading)
+            Slider(value: value, in: range).frame(width: 150)
+            Text(String(format: fmt, value.wrappedValue)).monospacedDigit().frame(width: 70, alignment: .trailing)
+            if abs(value.wrappedValue - def) > 1e-9 { Button(String(format: "default " + fmt, def)) { value.wrappedValue = def }.buttonStyle(.plain).foregroundStyle(.orange).font(.caption) } else { Text("default").font(.caption).foregroundStyle(.tertiary) }
+        }.font(.callout).help(help)
+    }
+    func toggle(_ label: String, _ value: Binding<Bool>, _ def: Bool, _ help: String) -> some View {
+        HStack(spacing: 8) {
+            Toggle(label, isOn: value).frame(width: 340, alignment: .leading)
+            if value.wrappedValue != def { Button("default \(def ? "on" : "off")") { value.wrappedValue = def }.buttonStyle(.plain).foregroundStyle(.orange).font(.caption) } else { Text("default").font(.caption).foregroundStyle(.tertiary) }
+        }.font(.callout).help(help)
     }
     var exportPanel: some View {
         VStack(alignment: .leading, spacing: 8) {

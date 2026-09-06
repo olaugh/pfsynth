@@ -1,0 +1,51 @@
+  252.6  coupling -32 skirt 1 sustain -12 tilt 0
+  266.0  coupling -32 skirt 1 sustain -15 tilt 0
+  280.7  coupling -32 skirt 1 sustain -18 tilt 0
+  167.9  coupling -32 skirt 1.5 sustain -12 tilt 0
+  164.9  coupling -32 skirt 1.5 sustain -15 tilt 0
+  166.3  coupling -32 skirt 1.5 sustain -18 tilt 0
+  197.5  coupling -32 skirt 2 sustain -12 tilt 0
+  200.5  coupling -32 skirt 2 sustain -15 tilt 0
+  203.1  coupling -32 skirt 2 sustain -18 tilt 0
+  413.8  coupling -32 skirt 3 sustain -12 tilt 0
+  436.5  coupling -32 skirt 3 sustain -15 tilt 0
+  447.7  coupling -32 skirt 3 sustain -18 tilt 0
+  328.5  coupling -34 skirt 1 sustain -12 tilt 0
+  370.3  coupling -34 skirt 1 sustain -15 tilt 0
+  409.4  coupling -34 skirt 1 sustain -18 tilt 0
+  197.6  coupling -34 skirt 1.5 sustain -12 tilt 0
+  203.0  coupling -34 skirt 1.5 sustain -15 tilt 0
+  213.2  coupling -34 skirt 1.5 sustain -18 tilt 0
+  168.9  coupling -34 skirt 2 sustain -12 tilt 0
+  169.9  coupling -34 skirt 2 sustain -15 tilt 0
+  175.5  coupling -34 skirt 2 sustain -18 tilt 0
+  275.9  coupling -34 skirt 3 sustain -12 tilt 0
+  289.7  coupling -34 skirt 3 sustain -15 tilt 0
+  300.6  coupling -34 skirt 3 sustain -18 tilt 0
+  413.1  coupling -36 skirt 1 sustain -12 tilt 0
+  494.0  coupling -36 skirt 1 sustain -15 tilt 0
+  569.5  coupling -36 skirt 1 sustain -18 tilt 0
+  256.6  coupling -36 skirt 1.5 sustain -12 tilt 0
+  281.3  coupling -36 skirt 1.5 sustain -15 tilt 0
+  307.3  coupling -36 skirt 1.5 sustain -18 tilt 0
+  183.8  coupling -36 skirt 2 sustain -12 tilt 0
+  190.5  coupling -36 skirt 2 sustain -15 tilt 0
+  203.6  coupling -36 skirt 2 sustain -18 tilt 0
+  193.7  coupling -36 skirt 3 sustain -12 tilt 0
+  201.9  coupling -36 skirt 3 sustain -15 tilt 0
+  214.0  coupling -36 skirt 3 sustain -18 tilt 0
+BEST (np.float64(164.87987211305696), ['--res-coupling', '-32', '--res-skirt', '1.5', '--res-sustain', '-15', '--res-tilt', '0'])
+   C3 halo bands 60-120..2k-4k  ptq [-37.2 -30.9 -28.8 -34.2 -40.5 -54. ]  model [-38.9 -27.9 -29.6 -34.8 -42.5 -58.1]
+   C4 halo bands 60-120..2k-4k  ptq [-37.8 -24.  -21.1 -29.  -30.6 -53.7]  model [-36.5 -20.5 -19.1 -24.5 -33.5 -53.9]
+   C5 halo bands 60-120..2k-4k  ptq [-37.1 -31.3 -28.2 -25.2 -34.8 -49.5]  model [-45.3 -35.4 -27.6 -22.9 -40.  -54.3]
+best: error 164.9
+   note  window     halo ptq / model     own-gain ptq / model
+   C3   0.15-0.6    -25.6 /  -29.1        -0.0 /   0.0
+   C3   0.60-1.5    -27.9 /  -29.0         0.0 /  -0.0
+   C3   1.50-3.0    -22.4 /  -20.6        -0.0 /  -0.1
+   C4   0.15-0.6    -25.2 /  -27.4         0.3 /   1.2
+   C4   0.60-1.5    -20.5 /  -20.6         0.5 /   1.5
+   C4   1.50-3.0    -18.2 /  -13.3         9.5 /   6.2
+   C5   0.15-0.6    -22.9 /  -29.1        -0.4 /   1.9
+   C5   0.60-1.5    -18.3 /  -17.5        -1.1 /   0.1
+   C5   1.50-3.0    -21.8 /  -19.4         2.3 /  -2.8

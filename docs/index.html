@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pfsynth — piano model demo with score following</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <header>
+      <h1>pf<span>synth</span></h1>
+      <div class="sub">Parametric piano model, running as WebAssembly. Pick a performance; the score follows.</div>
+      <input id="search" type="search" placeholder="Search pieces by composer or title  ( / )" autocomplete="off">
+    </header>
+    <ul id="pieces"></ul>
+    <footer>
+      Performances and scores from <a href="https://github.com/fosfrancesco/asap-dataset" target="_blank" rel="noopener">ASAP</a> / <a href="https://github.com/CPJKU/asap-dataset" target="_blank" rel="noopener">nASAP</a> (CC BY-NC-SA 4.0). Engraving by <a href="https://www.verovio.org" target="_blank" rel="noopener">Verovio</a>. Synth: <a href="https://github.com/olaugh/pfsynth" target="_blank" rel="noopener">pfsynth</a> (MIT).
+    </footer>
+  </aside>
+  <main id="main">
+    <div id="scorewrap">
+      <div id="placeholder"><h2>Choose a piece</h2><div>Then press play. Click a note in the score to jump there. <kbd>Space</kbd> play/pause · <kbd>⌘K</kbd> settings</div></div>
+      <div id="score"></div>
+    </div>
+    <div id="bottom">
+      <div id="transport">
+        <button id="play" class="primary" disabled>Play</button>
+        <div class="title" id="nowplaying"><span>Nothing loaded</span></div>
+        <input id="seek" type="range" min="0" max="1" step="0.01" value="0" disabled>
+        <div id="time">0:00 / 0:00</div>
+        <button id="settingsbtn" title="Settings (⌘K)">Settings</button>
+      </div>
+      <div id="keys"></div>
+      <div id="meters">
+        <span>Voices <b id="voices">0</b></span>
+        <span>DSP load <span class="bar"><i id="loadbar"></i></span> <b id="loadpct">0%</b></span>
+        <span id="status"></span>
+      </div>
+    </div>
+  </main>
+</div>
+<div id="settings" aria-hidden="true">
+  <header>
+    <input id="setsearch" type="search" placeholder="Search settings…" autocomplete="off">
+    <button id="setclose" title="Close (Esc)">✕</button>
+  </header>
+  <div class="list" id="setlist"></div>
+  <footer>
+    <button id="resetall">Reset all to defaults</button>
+    <span>Defaults are the current known-good set.</span>
+  </footer>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/verovio@6.3.0/dist/verovio-toolkit-wasm.js" defer></script>
+<script src="app.js" defer></script>
+</body>
+</html>

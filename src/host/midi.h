@@ -33,6 +33,8 @@ typedef struct {
 /* Load `path` into `song`. Returns 0 on success; on failure song->ev is NULL
  * and a message is written to stderr. */
 int  pf_midi_load(pf_song *song, const char *path);
+/* Parse an SMF already in memory (the WebAssembly build has no file system). */
+int  pf_midi_parse(pf_song *song, const unsigned char *buf, long size);
 void pf_midi_free(pf_song *song);
 
 #endif

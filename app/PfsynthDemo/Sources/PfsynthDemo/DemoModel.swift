@@ -17,6 +17,7 @@ final class DemoModel: ObservableObject {
     @Published var exporting = false
     @Published var exportProgress = 0.0
     @Published var tagFilter: String? = nil
+    @Published var searchText = ""
     @Published var activeVoices = 0
     @Published var dspLoad = 0.0
     @Published var dspPeak = 0.0
@@ -27,7 +28,15 @@ final class DemoModel: ObservableObject {
     private var timer: Timer?
     private var cancelExport = false
 
-    var filtered: [Piece] { tagFilter.map { t in pieces.filter { $0.tags.contains(t) } } ?? pieces }
+    /// Text search over composer, title, tags, corpus and the description; every word must match. Combined with the challenge filter.
+    var filtered: [Piece] {
+        let words = searchText.lowercased().split(separator: " ").map(String.init)
+        return pieces.filter { p in
+            (tagFilter.map { p.tags.contains($0) } ?? true) && words.allSatisfy { w in
+                (p.composer + " " + p.title + " " + p.tags.joined(separator: " ") + " " + p.corpus + " " + p.why).lowercased().contains(w)
+            }
+        }
+    }
     var scene: RollScene { RollScene(song: song, time: time, sounding: sounding, range: excerptIn...max(excerptOut, excerptIn + 0.01), title: selection.map { "\($0.composer) · \($0.title)" } ?? "") }
 
     init() {

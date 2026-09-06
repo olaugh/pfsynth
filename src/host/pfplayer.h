@@ -10,6 +10,7 @@
 #define PF_PLAYER_H
 #include "../core/pf_partial.h"
 #include "../core/pf_attack.h"
+#include "../core/pf_resonance.h"
 #include "midi.h"
 #define PF_PLAYER_VOICES 96
 typedef struct {
@@ -20,6 +21,8 @@ typedef struct {
     double gain;      /* linear makeup before the soft clip; the model's absolute level is recording dBFS */
     double body_db, knock_db, noise_db; /* onset trims in dB relative to the fit: slow body modes, fast knock modes, noise burst */
     int limiter;      /* 1 = block lookahead peak limiter after the gain (live playback); 0 = none (offline: render in float, normalize afterwards) */
+    int resonance;    /* 1 = sympathetic string resonance (pf_resonance) over the mix */
+    double resonance_db; /* trim on the sympathetic bank output, 0 = as fitted */
 } pf_player_options;
 typedef struct {
     pf_partial p; pf_attack a;
@@ -29,6 +32,7 @@ typedef struct {
 } pf_player_voice;
 typedef struct {
     double sr; pf_player_options opt; pf_pedal_params pedal; pf_attack_patch apatch;
+    pf_resonance_params rp; pf_resonance res; int res_tone;   /* sympathetic bank, built for the patch of res_tone */
     const pf_midi_event *ev; int nev, next;
     double t, duration;
     double pedal_pos, soft; int pedal_down, sostenuto_down;
@@ -39,6 +43,7 @@ typedef struct {
 void pf_player_defaults(pf_player_options *o);
 void pf_player_init(pf_player *pl, double sr, const pf_player_options *o);
 void pf_player_set_options(pf_player *pl, const pf_player_options *o);   /* tone/attack/soft apply to new notes; pedal mode to new and sustained notes */
+void pf_player_set_resonance(pf_player *pl, const pf_resonance_params *rp); /* rebuild the sympathetic bank with other coupling parameters (fitting) */
 void pf_player_load(pf_player *pl, const pf_midi_event *ev, int n, double duration); /* events must stay valid; sorted by time */
 void pf_player_seek(pf_player *pl, double t);        /* silences voices, restores controller state at t */
 int  pf_player_render(pf_player *pl, float *out, int frames);  /* mono, overwrites out; returns active voices */

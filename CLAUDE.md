@@ -139,6 +139,21 @@ peak-normalized). Measuring it showed the bare waveguide+body under-radiate the 
 makeup `(f0/110)^output_pitch` (≈0.8, capped ×10), fit so the model's A4–A6 peak balance
 matches the Salamander (~0.7 of the bass).
 
+### Sympathetic resonance (`pf_resonance`) — experiment 05
+The partial-model voices were independent: nothing rang in sympathy. `src/core/pf_resonance`
+adds one bank of second-order resonators per string (8 partials, frequencies and free decay
+from the tonal patch) over the mix, after Bank/Zambon/Fontana 2010. Two couplings, both fitted
+to Pianoteq lone notes with the pedal down vs up (`tools/symp_fit.py`,
+`experiments/sympathetic/README.md`): an **impulsive** one (a note-on injects free vibration
+into every open string through a 1.5 Hz Lorentzian skirt around each of its partials, −32 dB
+for a coincident partial — this makes the semitone-neighbour strings ring like the reference)
+and a **sustained** one (the bank is driven by the mix with a gain normalized so a coincident
+mode builds up to at most −15 dB of the driver; an unbounded driven resonator would reach
++60 dB because nothing feeds energy back). Dampers follow the voices' pedal law; held and
+sostenuto-captured strings are open; a string being played is not driven. Wired into
+`pf_player` (`resonance`, `resonance_db`), `pfrender` (`--no-resonance`, `--res-*`), the app's
+Sound section and the web demo. A/B clips: `tools/symp_audition.py`.
+
 ### Deferred to later milestones
 Sympathetic resonance, accurate dispersion (realize a target `B` exactly), velocity-
 brightness vs the real samples, the rest of the instrument family, the serialized song format.
@@ -185,6 +200,20 @@ and exits search) · `Q` quit (both via a confirmation modal).
 The TUI depends on **notcurses** (homebrew keg at `/opt/homebrew/opt/notcurses`, no
 pkg-config installed so the path is hardcoded in the Makefile) and macOS CoreAudio. The
 offline `pfsynth` target stays dependency-free.
+
+## Web demo (`docs/`, GitHub Pages)
+`tools/build_wasm.sh` compiles the partial-model stack (`pf_partial`, `pf_attack`, `pf_resonance`,
+`midi`, `pfplayer`, `src/host/pfwasm.c`) with **wasi-sdk** (`build/wasi/wasi-sdk`, not in git;
+`--target=wasm32-wasip1 -mexec-model=reactor`) to `docs/pfsynth.wasm`; `docs/worklet.js` hosts it
+in an AudioWorklet with WASI stubs. `docs/app.js` plays (n)ASAP performances packed by
+`tools/web_pieces.py` (`docs/pieces/<id>/{perf.mid, score.musicxml.gz, align.tsv.gz}`, 53 pieces,
+CC BY-NC-SA 4.0) while Verovio (jsDelivr) renders the MusicXML; nASAP's note alignments map
+performed notes to the MusicXML note ids, which Verovio keeps on its SVG `g.note` elements, so
+score following is an id lookup. Settings palette (⌘K) exposes every knob with its known-good
+default (from `pfw_default`), Experimental/Legacy sections collapsed. Test locally with
+`python3 -m http.server -d docs 8765`. Lessons: Verovio's `onRuntimeInitialized` may already
+have fired (try constructing the toolkit first); `scroll-behavior: smooth` and rAF stall in
+background tabs (jump-scroll, and follow from the worklet's status messages).
 
 ## Core API (`src/core/pf_string.h`)
 

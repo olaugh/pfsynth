@@ -8,12 +8,21 @@ struct SongData {
     var duration: Double = 0; var eventCount = 0
     static let empty = SongData()
 }
+/// Every knob of the player with its known-good default (the values a fresh `SynthOptions()` carries).
 struct SynthOptions: Equatable {
     var pianoteqTone = true; var attack = true; var continuousPedal = true; var unaCorda = true; var gainDb = 6.0
     var bodyDb = -18.0, knockDb = -22.0, noiseDb = -17.0   // onset trims relative to the fit, chosen by ear on 2026-09-05 (experiments/attack-ptq/listening-trims.json)
+    var resonance = true, resonanceDb = 0.0                // sympathetic string resonance (experiments/sympathetic), fitted to Pianoteq lone notes
+    var resCoupling = -32.0, resSkirt = 1.5, resSustain = -15.0, resTilt = 0.0, resT60 = 1.0   // its internals (Experimental section)
     var c: pf_player_options {
-        pf_player_options(tone: pianoteqTone ? 1 : 0, attack: attack ? 1 : 0, pedal_mode: continuousPedal ? 1 : 0, una_corda: unaCorda ? 1 : 0, gain: pow(10, gainDb / 20), body_db: bodyDb, knock_db: knockDb, noise_db: noiseDb, limiter: 1)
+        pf_player_options(tone: pianoteqTone ? 1 : 0, attack: attack ? 1 : 0, pedal_mode: continuousPedal ? 1 : 0, una_corda: unaCorda ? 1 : 0, gain: pow(10, gainDb / 20), body_db: bodyDb, knock_db: knockDb, noise_db: noiseDb, limiter: 1, resonance: resonance ? 1 : 0, resonance_db: resonanceDb)
     }
+    var resonanceParams: pf_resonance_params {
+        var r = pf_resonance_params(); pf_resonance_defaults(&r)
+        r.coupling_db = Float(resCoupling); r.skirt_hz = Float(resSkirt); r.sustain_db = Float(resSustain); r.tilt_db = Float(resTilt); r.t60_scale = Float(resT60)
+        return r
+    }
+    var resonanceInternals: [Double] { [resCoupling, resSkirt, resSustain, resTilt, resT60] }
 }
 enum SynthError: Error, LocalizedError {
     case load(String), export(String)
@@ -65,7 +74,12 @@ final class Synth {
         pf_player_load(player, song.ev, song.n, song.duration)
         return digest(song)
     }
-    func setOptions(_ o: SynthOptions) { lock.lock(); opts = o.c; pf_player_set_options(player, &opts); lock.unlock() }
+    private var internals = SynthOptions().resonanceInternals
+    func setOptions(_ o: SynthOptions) {
+        lock.lock(); opts = o.c; pf_player_set_options(player, &opts)
+        if o.resonanceInternals != internals { internals = o.resonanceInternals; var r = o.resonanceParams; pf_player_set_resonance(player, &r) }   // rebuilds the bank (silences it)
+        lock.unlock()
+    }
     func seek(_ t: Double) { lock.lock(); pf_player_seek(player, t); finished = false; lock.unlock() }
     var time: Double { lock.lock(); defer { lock.unlock() }; return pf_player_time(player) }
     var activeVoices: Int { lock.lock(); defer { lock.unlock() }; return Int(pf_player_active(player)) }
@@ -102,6 +116,7 @@ final class OfflineRenderer {
         guard pf_midi_load(&song, url.path) == 0 else { throw SynthError.load(url.lastPathComponent) }
         var o = options.c; o.gain = 1; o.limiter = 0   // offline: float headroom, normalized afterwards
         pf_player_init(player, Synth.sampleRate, &o)
+        if options.resonanceInternals != SynthOptions().resonanceInternals { var r = options.resonanceParams; pf_player_set_resonance(player, &r) }
         pf_player_load(player, song.ev, song.n, song.duration)
         self.start = max(0, start); self.end = min(end, song.duration)
         totalFrames = max(0, Int((self.end - self.start) * Synth.sampleRate))
