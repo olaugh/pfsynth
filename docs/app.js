@@ -31,7 +31,7 @@ const SETTINGS = [
   { id:OPT.LIMITER, name:'Limiter', group:'legacy', type:'toggle', desc:'Block lookahead peak limiter at −0.5 dBFS. Turning it off exposes clipping on fff chords.' },
 ];
 const $ = (s) => document.querySelector(s);
-const state = { pieces:[], piece:null, token:0, events:null, duration:0, playing:false, lastStatus:null, audio:null, node:null, ready:false, defaults:{...FALLBACK_DEFAULTS}, values:{}, score:null, follow:null, pendingLoad:null, pendingLoadToken:0, vrv:null };
+const state = { pieces:[], custom:[], roll:null, piece:null, token:0, events:null, duration:0, playing:false, lastStatus:null, audio:null, node:null, ready:false, defaults:{...FALLBACK_DEFAULTS}, values:{}, score:null, follow:null, pendingLoad:null, pendingLoadToken:0, vrv:null };
 
 // ---------- pieces ----------
 async function loadPieces() {
@@ -39,25 +39,55 @@ async function loadPieces() {
   renderPieces('');
 }
 function fmtTime(s) { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function renderPieces(q) {
   const ul = $('#pieces'); ul.innerHTML = '';
   const words = q.toLowerCase().split(/\s+/).filter(Boolean);
-  const list = state.pieces.filter(p => { const hay = (p.composer + ' ' + p.title + ' ' + (p.keywords || '') + ' ' + (p.tags || []).join(' ') + ' ' + p.performer).toLowerCase(); return words.every(w => hay.includes(w)); });
+  const all = state.custom.concat(state.pieces);
+  const list = all.filter(p => { const hay = (p.composer + ' ' + p.title + ' ' + (p.keywords || '') + ' ' + (p.tags || []).join(' ') + ' ' + p.performer).toLowerCase(); return words.every(w => hay.includes(w)); });
   if (!list.length) { ul.innerHTML = '<li class="none">No pieces match.</li>'; return; }
   for (const p of list) {
-    const li = document.createElement('li'); li.dataset.id = p.id; if (state.piece && state.piece.id === p.id) li.classList.add('sel');
-    li.innerHTML = `<div class="c">${p.composer}</div><div class="t">${p.title}</div><div class="m"><span>${fmtTime(p.duration)}</span><span>${p.performer}</span>${(p.tags || []).map(t => `<span class="tag">${t}</span>`).join('')}</div>`;
+    const li = document.createElement('li'); li.dataset.id = p.id; if (state.piece && state.piece.id === p.id) li.classList.add('sel'); if (p.custom) li.classList.add('custom');
+    li.innerHTML = `<div class="c">${esc(p.composer)}</div><div class="t">${esc(p.title)}</div><div class="m"><span>${p.duration ? fmtTime(p.duration) : ''}</span><span>${esc(p.performer)}</span>${(p.tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>`;
     li.onclick = () => selectPiece(p);
     ul.appendChild(li);
   }
+}
+// ---------- user MIDI files (drag & drop / Open MIDI…) ----------
+let customSeq = 0;
+async function addFiles(files) {
+  const midis = Array.from(files).filter(f => /\.(mid|midi|smf|kar)$/i.test(f.name) || f.type === 'audio/midi' || f.type === 'audio/mid');
+  if (!midis.length) { setStatus('Drop a Standard MIDI File (.mid)', true); return; }
+  let first = null;
+  for (const f of midis) {
+    const bytes = await f.arrayBuffer();
+    const p = { id: 'custom-' + (++customSeq), custom: true, composer: 'Your file', title: f.name.replace(/\.(mid|midi|smf|kar)$/i, ''), performer: (f.size / 1024).toFixed(0) + ' KB', duration: 0, tags: ['your MIDI'], keywords: 'custom file dropped', bytes };
+    state.custom.unshift(p); if (!first) first = p;
+  }
+  renderPieces($('#search').value);
+  if (first) selectPiece(first);
+}
+function setupDrop() {
+  let depth = 0; const overlay = $('#dropzone');
+  document.addEventListener('dragenter', e => { if (!e.dataTransfer || !Array.from(e.dataTransfer.types).includes('Files')) return; e.preventDefault(); depth++; overlay.classList.add('show'); });
+  document.addEventListener('dragover', e => { if (!e.dataTransfer || !Array.from(e.dataTransfer.types).includes('Files')) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  document.addEventListener('dragleave', e => { if (--depth <= 0) { depth = 0; overlay.classList.remove('show'); } });
+  document.addEventListener('drop', e => { e.preventDefault(); depth = 0; overlay.classList.remove('show'); if (e.dataTransfer && e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+  $('#openfile').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
+  $('#openbtn').onclick = () => $('#openfile').click();
 }
 async function selectPiece(p) {
   if (state.piece && state.piece.id === p.id) return;
   state.piece = p; const token = ++state.token;
   for (const li of document.querySelectorAll('#pieces li')) li.classList.toggle('sel', li.dataset.id === p.id);
-  $('#nowplaying').innerHTML = `<b>${p.composer}</b> — ${p.title} <span>· ${p.performer}</span>`;
-  setStatus('Loading…'); pause(); clearFollow(); $('#score').innerHTML = ''; $('#placeholder').classList.remove('hidden'); $('#placeholder').innerHTML = '<h2>Rendering score…</h2>';
+  $('#nowplaying').innerHTML = `<b>${esc(p.composer)}</b> — ${esc(p.title)} <span>· ${esc(p.performer)}</span>`;
+  setStatus('Loading…'); pause(); clearFollow(); $('#score').innerHTML = ''; $('#score').classList.remove('hidden'); $('#roll').classList.add('hidden'); state.roll = null; $('#scorewrap').scrollTop = 0; $('#placeholder').classList.remove('hidden'); $('#placeholder').innerHTML = '<h2>Rendering score…</h2>';
   try {
+    if (p.custom) {   // no score or alignment: piano roll instead
+      state.pendingLoad = p.bytes.slice(0); state.pendingLoadToken = token; state.align = null;
+      $('#placeholder').classList.add('hidden'); $('#score').classList.add('hidden'); $('#roll').classList.remove('hidden');
+      await ensureAudio(); if (token !== state.token) return; sendLoad(); return;
+    }
     const [midi, xml, tsv] = await Promise.all([
       fetch(`pieces/${p.id}/perf.mid`).then(r => r.arrayBuffer()),
       fetchGz(`pieces/${p.id}/score.musicxml.gz`), fetchGz(`pieces/${p.id}/align.tsv.gz`)]);
@@ -108,7 +138,10 @@ function onWorklet(m) {
     case 'loaded':
       if (m.token !== state.token) return;
       state.events = { n: m.n, t: m.t, type: m.etype, note: m.note, val: m.val }; state.duration = m.duration;
-      $('#seek').max = m.duration; $('#seek').disabled = false; $('#play').disabled = false; buildFollow(); setStatus(`${m.n} events · ${fmtTime(m.duration)}`);
+      $('#seek').max = m.duration; $('#seek').disabled = false; $('#play').disabled = false; $('#seek').value = 0; $('#time').textContent = '0:00 / ' + fmtTime(m.duration);
+      if (state.piece && state.piece.custom) { state.piece.duration = m.duration; renderPieces($('#search').value); buildRoll(); }
+      else buildFollow();
+      setStatus(`${m.n} events · ${fmtTime(m.duration)}`);
       break;
     case 'status': state.lastStatus = { ...m, at: state.audio.currentTime }; updateKeys(m.keys); if (document.hidden) follow(m.time); $('#voices').textContent = m.active; const pct = Math.round(m.load * 100); $('#loadpct').textContent = pct + '%'; const bar = $('#loadbar'); bar.style.width = Math.min(100, pct) + '%'; bar.classList.toggle('hot', pct > 80); break;
     case 'ended': state.playing = false; $('#play').textContent = 'Play'; break;
@@ -118,7 +151,7 @@ function onWorklet(m) {
 }
 function play() { if (!state.ready || !state.events) return; state.audio.resume(); state.node.port.postMessage({ type: 'play' }); state.playing = true; $('#play').textContent = 'Pause'; }
 function pause() { if (state.node) state.node.port.postMessage({ type: 'pause' }); state.playing = false; $('#play').textContent = 'Play'; }
-function seek(t) { if (!state.node) return; state.node.port.postMessage({ type: 'seek', t }); if (state.lastStatus) { state.lastStatus.time = t; state.lastStatus.at = state.audio.currentTime; } resetFollow(t); }
+function seek(t) { if (!state.node) return; state.node.port.postMessage({ type: 'seek', t }); if (state.lastStatus) { state.lastStatus.time = t; state.lastStatus.at = state.audio.currentTime; } $('#seek').value = t; $('#time').textContent = fmtTime(t) + ' / ' + fmtTime(state.duration); resetFollow(t); if (state.roll) drawRoll(t, true); }
 function currentTime() {
   const s = state.lastStatus; if (!s) return 0;
   return state.playing && s.playing ? s.time + (state.audio.currentTime - s.at) : s.time;
@@ -166,6 +199,7 @@ function indexScore() {
   state.score = new Map(); for (const g of document.querySelectorAll('#score g.note')) state.score.set(g.id, g);
   if (state.follow) resetFollow(currentTime());
 }
+$('#roll').addEventListener('click', (e) => { if (!state.roll || !state.events) return; const r = e.currentTarget.getBoundingClientRect(); const pps = 110; seek(Math.max(0, currentTime() + (e.clientX - r.left - r.width * 0.3) / pps)); });
 $('#score').addEventListener('click', (e) => {
   const g = e.target.closest('g.note'); if (!g || !state.follow) return;
   const ev = state.follow.idToEv.get(g.id); if (ev === undefined) return;
@@ -190,7 +224,7 @@ function buildFollow() {
   state.follow = { ons, offOf, evToId, idToEv, ptr: 0, active: [], lastScroll: 0, lastT: -1 };
   resetFollow(0);
 }
-function clearFollow() { if (state.follow) for (const a of state.follow.active) a.el.classList.remove('on'); state.follow = null; state.events = null; $('#play').disabled = true; $('#seek').disabled = true; }
+function clearFollow() { if (state.follow) for (const a of state.follow.active) a.el.classList.remove('on'); state.follow = null; state.events = null; state.roll = null; $('#play').disabled = true; $('#seek').disabled = true; }
 function resetFollow(t) {
   const F = state.follow; if (!F) return; const E = state.events;
   for (const a of F.active) a.el.classList.remove('on'); F.active = [];
@@ -221,10 +255,45 @@ function follow(t) {
 }
 function tick() {
   requestAnimationFrame(tick);
-  if (!state.follow || !state.events) return;
+  if (!state.events) return;
   const t = currentTime();
   if (state.playing) { $('#seek').value = t; $('#time').textContent = fmtTime(t) + ' / ' + fmtTime(state.duration); }
-  follow(t);
+  if (state.follow) follow(t); else if (state.roll) drawRoll(t);
+}
+
+// ---------- piano roll (user files without a score) ----------
+function buildRoll() {
+  const E = state.events, notes = [], open = new Map();
+  for (let i = 0; i < E.n; i++) {
+    if (E.type[i] === 1) { const q = open.get(E.note[i]) || []; q.push({ t0: E.t[i], t1: -1, pitch: E.note[i], vel: E.val[i] }); open.set(E.note[i], q); }
+    else if (E.type[i] === 0) { const q = open.get(E.note[i]); if (q && q.length) { const n = q.shift(); n.t1 = E.t[i]; notes.push(n); } }
+  }
+  for (const q of open.values()) for (const n of q) { n.t1 = state.duration; notes.push(n); }
+  notes.sort((a, b) => a.t0 - b.t0);
+  state.roll = { notes, lastDraw: -1 };
+  drawRoll(currentTime(), true);
+}
+function velocityColor(v, alpha) { const h = 220 - 220 * Math.min(1, v / 110); return `hsla(${h}, 75%, ${45 + 10 * (v / 127)}%, ${alpha})`; }
+function drawRoll(t, force) {
+  const R = state.roll, c = $('#roll'); if (!R) return;
+  const wrap = $('#scorewrap'), W = wrap.clientWidth, H = wrap.clientHeight, dpr = window.devicePixelRatio || 1;
+  if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.width = W + 'px'; c.style.height = H + 'px'; force = true; }
+  if (!force && Math.abs(t - R.lastDraw) < 0.004) return; R.lastDraw = t;
+  const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.fillStyle = '#fbfaf5'; g.fillRect(0, 0, W, H);
+  const pps = 110, x0 = t - W * 0.3 / pps, x1 = x0 + W / pps, top = 24, bottom = H - 30, kh = (bottom - top) / 88;
+  const y = p => bottom - (p - 20) * kh;
+  for (let p = 21; p <= 108; p++) { const pc = p % 12; if ([1, 3, 6, 8, 10].includes(pc)) { g.fillStyle = 'rgba(0,0,0,0.045)'; g.fillRect(0, y(p) - kh, W, kh); } if (pc === 0) { g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(0, y(p), W, 1); g.fillStyle = '#999'; g.font = '11px sans-serif'; g.fillText('C' + (p / 12 - 1), 4, y(p) - 2); } }
+  for (let s = Math.ceil(x0); s <= x1; s++) { const x = (s - x0) * pps; g.fillStyle = s % 10 === 0 ? 'rgba(0,0,0,0.18)' : 'rgba(0,0,0,0.07)'; g.fillRect(x, top, 1, bottom - top); if (s % 10 === 0) { g.fillStyle = '#777'; g.fillText(fmtTime(s), x + 3, H - 12); } }
+  const N = R.notes; let lo = 0, hi = N.length; while (lo < hi) { const m = (lo + hi) >> 1; if (N[m].t0 < x0 - 30) lo = m + 1; else hi = m; }
+  for (let i = lo; i < N.length && N[i].t0 <= x1; i++) {
+    const n = N[i]; if (n.t1 < x0) continue;
+    const xa = (n.t0 - x0) * pps, xb = Math.max(xa + 2, (n.t1 - x0) * pps), on = n.t0 <= t && t < n.t1;
+    g.fillStyle = velocityColor(n.vel, on ? 1 : 0.75); g.fillRect(xa, y(n.pitch) - kh + 0.5, xb - xa, kh - 1);
+    if (on) { g.strokeStyle = '#e0553d'; g.lineWidth = 1.5; g.strokeRect(xa, y(n.pitch) - kh + 0.5, xb - xa, kh - 1); }
+  }
+  g.fillStyle = '#e0553d'; g.fillRect(W * 0.3, top, 2, bottom - top);
+  g.fillStyle = '#666'; g.font = '12px sans-serif'; g.fillText('Piano roll (no score for this file) · velocity = colour', 40, 16);
 }
 
 // ---------- settings palette ----------
@@ -286,6 +355,7 @@ function init() {
     else if (e.key === ' ') { e.preventDefault(); if (!$('#play').disabled) (state.playing ? pause() : play()); }
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { if (state.events) seek(Math.max(0, Math.min(state.duration, currentTime() + (e.key === 'ArrowLeft' ? -5 : 5)))); }
   });
-  loadPieces(); requestAnimationFrame(tick);
+  setupDrop(); loadPieces(); requestAnimationFrame(tick);
+  window.addEventListener('resize', () => { if (state.roll) drawRoll(currentTime(), true); });
 }
 init();

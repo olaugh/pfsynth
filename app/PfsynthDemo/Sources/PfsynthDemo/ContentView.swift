@@ -1,8 +1,10 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @EnvironmentObject var m: DemoModel
     @State private var settingsQuery = ""
+    @State private var dropTargeted = false
     @FocusState private var settingsFocused: Bool
     @FocusState private var searchFocused: Bool
     var body: some View {
@@ -30,7 +32,7 @@ struct ContentView: View {
                         HStack(spacing: 4) { ForEach(p.tags, id: \.self) { Text($0).font(.caption2).padding(.horizontal, 6).padding(.vertical, 1).background(Capsule().fill(color(for: $0).opacity(0.25))) } }
                     }.padding(.vertical, 2).opacity(p.exists ? 1 : 0.4).tag(p)
                 }.listStyle(.sidebar)
-                Button { m.openFile() } label: { Label("Open MIDI…", systemImage: "folder") }.padding(10)
+                HStack { Button { m.openFile() } label: { Label("Open MIDI…", systemImage: "folder") }; Text("or drop files on the window").font(.caption).foregroundStyle(.secondary) }.padding(10)
             }.navigationSplitViewColumnWidth(min: 260, ideal: 300)
         } detail: {
             VStack(spacing: 10) {
@@ -39,6 +41,15 @@ struct ContentView: View {
                 transport
                 HStack(alignment: .top, spacing: 24) { optionsPanel; Divider(); exportPanel }.padding(.bottom, 6)
             }.padding(14)
+            .onDrop(of: [.fileURL], isTargeted: $dropTargeted) { providers in
+                Task { @MainActor in
+                    var urls: [URL] = []
+                    for p in providers { if let u = try? await p.loadItem(forTypeIdentifier: UTType.fileURL.identifier) as? Data, let url = URL(dataRepresentation: u, relativeTo: nil) { urls.append(url) } else if let u = try? await p.loadItem(forTypeIdentifier: UTType.fileURL.identifier) as? URL { urls.append(u) } }
+                    m.open(urls: urls)
+                }
+                return true
+            }
+            .overlay { if dropTargeted { RoundedRectangle(cornerRadius: 10).strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 3, dash: [8])).padding(6).overlay(Text("Drop MIDI files to play them").font(.title3).padding(10).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))).allowsHitTesting(false) } }
         }
         .background { Button("") { settingsFocused = true }.keyboardShortcut("k", modifiers: .command).hidden(); Button("") { searchFocused = true }.keyboardShortcut("f", modifiers: .command).hidden() }
     }

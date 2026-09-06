@@ -13,6 +13,7 @@
       <h1>pf<span>synth</span></h1>
       <div class="sub">Parametric piano model, running as WebAssembly. Pick a performance; the score follows.</div>
       <input id="search" type="search" placeholder="Search pieces by composer or title  ( / )" autocomplete="off">
+      <div class="open"><button id="openbtn">Open MIDI…</button><span>or drop .mid files anywhere</span><input id="openfile" type="file" accept=".mid,.midi,.smf,.kar,audio/midi" multiple hidden></div>
     </header>
     <ul id="pieces"></ul>
     <footer>
@@ -21,8 +22,9 @@
   </aside>
   <main id="main">
     <div id="scorewrap">
-      <div id="placeholder"><h2>Choose a piece</h2><div>Then press play. Click a note in the score to jump there. <kbd>Space</kbd> play/pause · <kbd>⌘K</kbd> settings</div></div>
+      <div id="placeholder"><h2>Choose a piece</h2><div>Then press play. Click a note in the score to jump there. <kbd>Space</kbd> play/pause · <kbd>⌘K</kbd> settings</div><div class="drophint">Or drop your own MIDI file anywhere on the page: it plays with a piano roll.</div></div>
       <div id="score"></div>
+      <canvas id="roll" class="hidden"></canvas>
     </div>
     <div id="bottom">
       <div id="transport">
@@ -41,6 +43,7 @@
     </div>
   </main>
 </div>
+<div id="dropzone"><div>Drop MIDI files to play them</div></div>
 <div id="settings" aria-hidden="true">
   <header>
     <input id="setsearch" type="search" placeholder="Search settings…" autocomplete="off">

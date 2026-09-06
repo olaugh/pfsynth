@@ -20,6 +20,10 @@ Score following: nASAP's `note_alignment.tsv` maps performed notes (pitch, onset
 `g.note` elements, so highlighting is a lookup. Clicking a note seeks to its performance
 onset.
 
+Your own MIDI files: drop `.mid` files anywhere on the page (or *Open MIDI…*); they play
+with a velocity-coloured piano roll instead of a score (no alignment exists for them) and
+stay in the list for the session. Nothing is uploaded: the file is parsed in the browser.
+
 Settings (⌘K / Ctrl+K): every synth control with its known-good default (the defaults
 come from the wasm module, `pfw_default`), grouped, with the sympathetic-resonance
 internals under *Experimental* and the older behaviours under *Legacy*.

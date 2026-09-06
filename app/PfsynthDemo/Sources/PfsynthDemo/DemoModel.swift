@@ -62,12 +62,19 @@ final class DemoModel: ObservableObject {
         } catch { status = error.localizedDescription; song = .empty }
     }
     func openFile() {
-        let p = NSOpenPanel(); p.allowedContentTypes = [.midi]; p.allowsMultipleSelection = false
-        if p.runModal() == .OK, let url = p.url {
-            var s = pf_song_probe(url)
-            let piece = Piece.fromFile(url, duration: s.0, notes: s.1); s = (0, 0)
-            pieces.insert(piece, at: 0); select(piece)
+        let p = NSOpenPanel(); p.allowedContentTypes = [.midi]; p.allowsMultipleSelection = true
+        if p.runModal() == .OK { open(urls: p.urls) }
+    }
+    /// Add MIDI files (Open… or drag and drop) to the top of the list and select the first.
+    func open(urls: [URL]) {
+        var first: Piece?
+        for url in urls where ["mid", "midi", "smf", "kar"].contains(url.pathExtension.lowercased()) {
+            let s = pf_song_probe(url)
+            let piece = Piece.fromFile(url, duration: s.0, notes: s.1)
+            pieces.removeAll { $0.path == piece.path }; pieces.insert(piece, at: 0)
+            if first == nil { first = piece }
         }
+        if let f = first { selection = f; select(f) } else { status = "Drop Standard MIDI Files (.mid)" }
     }
     private func pf_song_probe(_ url: URL) -> (Double, Int) {
         if let r = try? OfflineRenderer(url: url, start: 0, end: 1, options: options) { return (r.duration, 0) }

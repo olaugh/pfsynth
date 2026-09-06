@@ -82,3 +82,11 @@ kbd { font:11px ui-monospace, SFMono-Regular, Menlo, monospace; background:var(-
   #sidebar { grid-row:auto; max-height:38vh; border-right:none; border-bottom:1px solid var(--line); }
   #sidebar footer { display:none; }
 }
+
+#sidebar .open { display:flex; align-items:center; gap:8px; margin-top:8px; color:var(--dim); font-size:12px; }
+#pieces li.custom .c { color:#7fc8a9; }
+#placeholder .drophint { color:#999; font-size:12px; margin-top:6px; }
+#roll { position:absolute; inset:0; cursor:crosshair; }
+#dropzone { position:fixed; inset:0; background:rgba(20,23,29,.82); z-index:20; display:none; align-items:center; justify-content:center; pointer-events:none; }
+#dropzone.show { display:flex; }
+#dropzone div { border:2px dashed var(--accent2); border-radius:14px; padding:40px 60px; font-size:22px; color:var(--fg); }
