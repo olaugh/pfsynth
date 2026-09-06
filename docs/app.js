@@ -1,7 +1,7 @@
 // pfsynth web demo: WebAssembly piano model in an AudioWorklet + Verovio score following
 // over nASAP note alignments.  Static page, no build step (see README.md).
 'use strict';
-const BUILD = '20260906h';   // bump with index.html's ?v= so GitHub Pages' 10-minute cache doesn't serve a stale script
+const BUILD = '20260906i';   // bump with index.html's ?v= so GitHub Pages' 10-minute cache doesn't serve a stale script
 const OPT = { TONE:0, ATTACK:1, PEDAL_MODE:2, UNA_CORDA:3, GAIN_DB:4, BODY_DB:5, KNOCK_DB:6, NOISE_DB:7, LIMITER:8,
   RESONANCE:9, RESONANCE_DB:10, RES_COUPLING:11, RES_SKIRT:12, RES_SUSTAIN:13, RES_TILT:14, RES_T60:15, TREBLE_DB:16, TOP_KNOCK_T60:17, TOP_KNOCK_DB:18 };
 // Fallback defaults (the wasm module's pfw_default() is the source of truth and replaces these once the audio engine starts).
@@ -168,7 +168,7 @@ function onWorklet(m) {
       else buildFollow();
       setStatus(`${m.n} events · ${fmtTime(m.duration)}`);
       break;
-    case 'status': state.lastStatus = m; anchorClock(m); updateKeys(m.keys); if (document.hidden) follow(m.time); $('#voices').textContent = m.active; const pct = Math.round(m.load * 100); $('#loadpct').textContent = pct + '%'; const bar = $('#loadbar'); bar.style.width = Math.min(100, pct) + '%'; bar.classList.toggle('hot', pct > 80); break;
+    case 'status': state.lastStatus = m; state.wasmBytes = m.wasmBytes; anchorClock(m); updateKeys(m.keys); if (document.hidden) follow(m.time); $('#voices').textContent = m.active; const pct = Math.round(m.load * 100); $('#loadpct').textContent = pct + '%'; const bar = $('#loadbar'); bar.style.width = Math.min(100, pct) + '%'; bar.classList.toggle('hot', pct > 80); break;
     case 'ended': state.playing = false; $('#play').textContent = 'Play'; break;
     case 'log': console.log('[pfsynth]', m.text); break;
     case 'error': setStatus(m.text, true); break;
@@ -191,6 +191,22 @@ function anchorClock(m) {
   else state.clockOffset += (off - state.clockOffset) * 0.05;
 }
 function setStatus(text, err) { const el = $('#status'); el.textContent = text; el.classList.toggle('err', !!err); }
+
+// ---------- memory meter (leak watching) ----------
+// Chrome exposes the main thread's JS heap (performance.memory, coarse and non-standard); the worklet
+// reports the wasm linear memory; the DOM count is dominated by the score SVGs.  Sampled once a second.
+const fmtMB = (b) => (b / 1048576).toFixed(1).padStart(6) + ' MB';
+function updateMemory() {
+  const pm = performance.memory;
+  const el = $('#mem'); if (!el) return;
+  let js = 'n/a', peak = '';
+  if (pm) { state.heapPeak = Math.max(state.heapPeak || 0, pm.usedJSHeapSize); js = fmtMB(pm.usedJSHeapSize); peak = ' (peak ' + fmtMB(state.heapPeak).trim() + ', limit ' + Math.round(pm.jsHeapSizeLimit / 1048576) + ' MB)'; }
+  const wasm = state.wasmBytes ? fmtMB(state.wasmBytes) : '   n/a';
+  const dom = document.getElementsByTagName('*').length;
+  el.innerHTML = `JS heap <b>${js}</b> · wasm <b>${wasm}</b> · DOM <b>${String(dom).padStart(6)}</b>`;
+  const custom = state.custom.reduce((n, p) => n + p.bytes.byteLength, 0), ev = state.events ? state.events.n * 11 : 0;
+  el.title = 'Main-thread JS heap' + peak + (pm ? '' : ' — performance.memory is Chrome-only') + '\nwasm linear memory of the synth (grows on demand, never shrinks)\nDOM elements (score SVGs dominate)\nRetained: ' + state.custom.length + ' dropped file(s), ' + (custom / 1024).toFixed(0) + ' KB · event arrays ' + (ev / 1024).toFixed(0) + ' KB · roll notes ' + (state.roll ? state.roll.notes.length : 0) + ' · score notes ' + (state.score ? state.score.size : 0);
+}
 
 // ---------- keyboard strip ----------
 function buildKeys() {
@@ -415,7 +431,7 @@ function init() {
     else if (e.key === ' ') { e.preventDefault(); if (!$('#play').disabled) (state.playing ? pause() : play()); }
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { if (state.events) seek(Math.max(0, Math.min(state.duration, currentTime() + (e.key === 'ArrowLeft' ? -5 : 5)))); }
   });
-  setupDrop(); loadPieces(); requestAnimationFrame(tick);
+  setupDrop(); loadPieces(); requestAnimationFrame(tick); updateMemory(); setInterval(updateMemory, 1000);
 
 }
 init();

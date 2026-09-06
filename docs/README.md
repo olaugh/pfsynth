@@ -24,6 +24,12 @@ Your own MIDI files: drop `.mid` files anywhere on the page (or *Open MIDI…*);
 with a velocity-coloured piano roll instead of a score (no alignment exists for them) and
 stay in the list for the session. Nothing is uploaded: the file is parsed in the browser.
 
+Memory meter (bottom row): main-thread JS heap from Chrome's `performance.memory` (used, with
+the peak and limit in the tooltip; other browsers show n/a), the synth's wasm linear memory as
+reported by the worklet, and the DOM element count (score SVGs dominate). Sampled once a
+second; the tooltip lists what the page retains (dropped files, event arrays, notes) to help
+spot leaks.
+
 Settings (⌘K / Ctrl+K): every synth control with its known-good default (the defaults
 come from the wasm module, `pfw_default`), grouped, with the sympathetic-resonance
 internals under *Experimental* and the older behaviours under *Legacy*.

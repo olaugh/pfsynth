@@ -52,7 +52,7 @@ class PfProcessor extends AudioWorkletProcessor {
   }
   status() {
     const keys = new Uint8Array(this.ex.memory.buffer, this.ex.pfw_sounding(), 128).slice();
-    this.port.postMessage({ type: 'status', time: this.ex.pfw_time(), ctxTime: currentTime, playing: this.playing, active: this.ex.pfw_active(), load: this.load, keys }, [keys.buffer]);
+    this.port.postMessage({ type: 'status', time: this.ex.pfw_time(), ctxTime: currentTime, playing: this.playing, active: this.ex.pfw_active(), load: this.load, wasmBytes: this.ex.memory.buffer.byteLength, keys }, [keys.buffer]);
   }
   process(inputs, outputs) {
     const out = outputs[0]; if (!out || !out.length) return true;

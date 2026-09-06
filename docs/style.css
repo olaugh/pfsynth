@@ -46,6 +46,8 @@ kbd { font:11px ui-monospace, SFMono-Regular, Menlo, monospace; background:var(-
 #meters #voices { min-width:2.4em; }
 #meters #loadpct { min-width:3.4em; }
 #meters #status { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+#meters #mem b { white-space:pre; text-align:right; }
+#meters #mem { cursor:help; }
 #meters .bar { width:70px; height:6px; background:var(--bg); border-radius:3px; overflow:hidden; display:inline-block; vertical-align:middle; margin-left:4px; }
 #meters .bar i { display:block; height:100%; background:var(--accent2); width:0; }
 #meters .bar i.hot { background:var(--accent); }
