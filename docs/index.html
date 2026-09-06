@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>pfsynth — piano model demo with score following</title>
-<link rel="stylesheet" href="style.css?v=20260906c">
+<link rel="stylesheet" href="style.css?v=20260906d">
 </head>
 <body>
 <div id="app">
@@ -37,6 +37,7 @@
       <div id="keys"></div>
       <div id="meters">
         <span>Voices <b id="voices">0</b></span>
+        <span class="legend">Velocity <i>pp</i><span id="vlegend"></span><i>ff</i></span>
         <span>DSP load <span class="bar"><i id="loadbar"></i></span> <b id="loadpct">0%</b></span>
         <span id="status"></span>
       </div>
@@ -56,6 +57,6 @@
   </footer>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/verovio@6.3.0/dist/verovio-toolkit-wasm.js" defer></script>
-<script src="app.js?v=20260906c" defer></script>
+<script src="app.js?v=20260906d" defer></script>
 </body>
 </html>

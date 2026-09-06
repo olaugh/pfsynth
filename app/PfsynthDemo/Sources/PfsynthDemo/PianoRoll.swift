@@ -7,7 +7,7 @@ struct RollScene {
     var time: Double
     var window: Double = 8          // seconds visible across the roll
     var lead: Double = 0.22         // playhead position as a fraction of the roll width
-    var sounding: [Bool] = Array(repeating: false, count: 128)
+    var sounding: [Int] = Array(repeating: 0, count: 128)   // velocity per sounding key, 0 = silent
     var range: ClosedRange<Double>? // excerpt in/out
     var title = ""
 }
@@ -65,11 +65,11 @@ struct RollRenderer {
         ctx.setFillColor(CGColor(gray: 0.92, alpha: 1)); ctx.fill(CGRect(x: 0, y: rollY0, width: kbW, height: rollH))
         for p in RollRenderer.low...RollRenderer.high where !RollRenderer.isBlack(p) {
             ctx.setStrokeColor(CGColor(gray: 0.6, alpha: 1)); ctx.setLineWidth(0.5); ctx.move(to: CGPoint(x: 0, y: y(p) + kh)); ctx.addLine(to: CGPoint(x: kbW, y: y(p) + kh)); ctx.strokePath()
-            if s.sounding[p] { ctx.setFillColor(CGColor(red: 1, green: 0.55, blue: 0.15, alpha: 1)); ctx.fill(CGRect(x: 0, y: y(p), width: kbW - 1, height: kh)) }
+            if s.sounding[p] > 0 { let (r, g, b) = RollRenderer.velocityColor(s.sounding[p]); ctx.setFillColor(CGColor(red: r, green: g, blue: b, alpha: 1)); ctx.fill(CGRect(x: 0, y: y(p), width: kbW - 1, height: kh)) }
             if p % 12 == 0 { label(ctx, "C\(p / 12 - 1)", at: CGPoint(x: 3, y: y(p) - 1), size: max(7, min(10, kh * 0.9)), color: CGColor(gray: 0.35, alpha: 1)) }
         }
         for p in RollRenderer.low...RollRenderer.high where RollRenderer.isBlack(p) {
-            ctx.setFillColor(s.sounding[p] ? CGColor(red: 1, green: 0.45, blue: 0.1, alpha: 1) : CGColor(gray: 0.12, alpha: 1))
+            if s.sounding[p] > 0 { let (r, g, b) = RollRenderer.velocityColor(s.sounding[p]); ctx.setFillColor(CGColor(red: r, green: g, blue: b, alpha: 1)) } else { ctx.setFillColor(CGColor(gray: 0.12, alpha: 1)) }
             ctx.fill(CGRect(x: kbW * 0.42, y: y(p) + 0.5, width: kbW * 0.58 - 1, height: max(kh - 1, 1)))
         }
         // pedal lanes

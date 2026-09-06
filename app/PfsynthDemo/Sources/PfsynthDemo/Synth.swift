@@ -83,10 +83,10 @@ final class Synth {
     func seek(_ t: Double) { lock.lock(); pf_player_seek(player, t); finished = false; lock.unlock() }
     var time: Double { lock.lock(); defer { lock.unlock() }; return pf_player_time(player) }
     var activeVoices: Int { lock.lock(); defer { lock.unlock() }; return Int(pf_player_active(player)) }
-    func soundingKeys() -> [Bool] {
+    func soundingKeys() -> [Int] {
         var keys = [UInt8](repeating: 0, count: 128)
         lock.lock(); _ = pf_player_sounding(player, &keys); lock.unlock()
-        return keys.map { $0 != 0 }
+        return keys.map { Int($0) }
     }
     /// Called from the audio thread.
     func render(frames: Int, left: UnsafeMutablePointer<Float>, right: UnsafeMutablePointer<Float>) {
@@ -125,6 +125,6 @@ final class OfflineRenderer {
     deinit { pf_midi_free(&song); player.deallocate() }
     var duration: Double { song.duration }
     func render(into buf: UnsafeMutablePointer<Float>, frames: Int) { _ = pf_player_render(player, buf, Int32(frames)); rendered += frames }
-    func soundingKeys() -> [Bool] { var keys = [UInt8](repeating: 0, count: 128); _ = pf_player_sounding(player, &keys); return keys.map { $0 != 0 } }
+    func soundingKeys() -> [Int] { var keys = [UInt8](repeating: 0, count: 128); _ = pf_player_sounding(player, &keys); return keys.map { Int($0) } }
     var time: Double { pf_player_time(player) }
 }

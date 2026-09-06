@@ -47,7 +47,10 @@ kbd { font:11px ui-monospace, SFMono-Regular, Menlo, monospace; background:var(-
 #keys { display:flex; position:relative; height:44px; width:100%; }
 #keys .w { flex:1; background:#f4f2ea; border:1px solid #333; border-radius:0 0 3px 3px; position:relative; }
 #keys .b { position:absolute; top:0; width:1.1%; height:60%; background:#222; border-radius:0 0 2px 2px; z-index:2; transform:translateX(-50%); }
-#keys .w.on { background:var(--key-on); } #keys .b.on { background:var(--key-on); }
+#keys .w.on, #keys .b.on { background:var(--key-on); }   /* overridden inline with the velocity colour */
+#meters .legend { display:inline-flex; align-items:center; gap:5px; }
+#meters .legend i { font-style:italic; font-family:Georgia, serif; }
+#meters .legend #vlegend { display:inline-block; width:80px; height:8px; border-radius:4px; }
 #status { color:var(--dim); font-size:12px; min-height:16px; }
 #status.err { color:var(--accent); }
 /* settings palette */

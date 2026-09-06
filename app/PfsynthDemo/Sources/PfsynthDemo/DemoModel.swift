@@ -10,7 +10,7 @@ final class DemoModel: ObservableObject {
     @Published var options = SynthOptions() { didSet { synth.setOptions(options) } }
     @Published var isPlaying = false
     @Published var time: Double = 0
-    @Published var sounding: [Bool] = Array(repeating: false, count: 128)
+    @Published var sounding: [Int] = Array(repeating: 0, count: 128)
     @Published var excerptIn: Double = 0
     @Published var excerptOut: Double = 0
     @Published var status = "Select a piece"
@@ -92,7 +92,7 @@ final class DemoModel: ObservableObject {
         timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) { [weak self] _ in Task { @MainActor in self?.tick() } }
     }
     func pause() { let was = isPlaying; engine.pause(); isPlaying = false; timer?.invalidate(); timer = nil; if was { tick() } }
-    func stop() { pause(); synth.seek(excerptIn); time = excerptIn; sounding = Array(repeating: false, count: 128) }
+    func stop() { pause(); synth.seek(excerptIn); time = excerptIn; sounding = Array(repeating: 0, count: 128) }
     func seek(_ t: Double) { synth.seek(t); time = t; sounding = synth.soundingKeys() }
     private func tick() {
         time = synth.time; sounding = synth.soundingKeys(); activeVoices = synth.activeVoices; dspLoad = synth.load; dspPeak = synth.loadPeak

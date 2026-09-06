@@ -26,7 +26,8 @@ typedef struct {
 } pf_player_options;
 typedef struct {
     pf_partial p; pf_attack a;
-    int used, note, held, sustained, sostenuto, attack;
+    int used, note, vel, held, sustained, sostenuto, attack;
+    int fading; double fade, fade_rate; /* restrike: the previous voice of this key fades out fast while the new strike replaces it */
     double start;     /* song time of note-on */
     float level;      /* last block RMS, for stealing and voice retirement */
 } pf_player_voice;
@@ -39,6 +40,7 @@ typedef struct {
     pf_player_voice v[PF_PLAYER_VOICES];
     long frames;
     double lim_gain;  /* limiter gain state */
+    long lim_hold;    /* samples left before the limiter may release (prevents block-rate pumping) */
 } pf_player;
 void pf_player_defaults(pf_player_options *o);
 void pf_player_init(pf_player *pl, double sr, const pf_player_options *o);
@@ -48,7 +50,7 @@ void pf_player_load(pf_player *pl, const pf_midi_event *ev, int n, double durati
 void pf_player_seek(pf_player *pl, double t);        /* silences voices, restores controller state at t */
 int  pf_player_render(pf_player *pl, float *out, int frames);  /* mono, overwrites out; returns active voices */
 double pf_player_time(const pf_player *pl);
-int  pf_player_sounding(const pf_player *pl, unsigned char keys[128]); /* 1 per sounding MIDI note; returns count */
+int  pf_player_sounding(const pf_player *pl, unsigned char keys[128]); /* velocity (1..127) per sounding MIDI note, 0 = silent; returns count */
 int  pf_player_active(const pf_player *pl);  /* voices in use */
 const pf_partial_patch *pf_player_patch(int tone);
 #endif

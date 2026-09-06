@@ -1,7 +1,7 @@
 // pfsynth web demo: WebAssembly piano model in an AudioWorklet + Verovio score following
 // over nASAP note alignments.  Static page, no build step (see README.md).
 'use strict';
-const BUILD = '20260906c';   // bump with index.html's ?v= so GitHub Pages' 10-minute cache doesn't serve a stale script
+const BUILD = '20260906d';   // bump with index.html's ?v= so GitHub Pages' 10-minute cache doesn't serve a stale script
 const OPT = { TONE:0, ATTACK:1, PEDAL_MODE:2, UNA_CORDA:3, GAIN_DB:4, BODY_DB:5, KNOCK_DB:6, NOISE_DB:7, LIMITER:8,
   RESONANCE:9, RESONANCE_DB:10, RES_COUPLING:11, RES_SKIRT:12, RES_SUSTAIN:13, RES_TILT:14, RES_T60:15 };
 // Fallback defaults (the wasm module's pfw_default() is the source of truth and replaces these once the audio engine starts).
@@ -165,7 +165,7 @@ function onWorklet(m) {
       else buildFollow();
       setStatus(`${m.n} events · ${fmtTime(m.duration)}`);
       break;
-    case 'status': state.lastStatus = { ...m, at: state.audio.currentTime }; updateKeys(m.keys); if (document.hidden) follow(m.time); $('#voices').textContent = m.active; const pct = Math.round(m.load * 100); $('#loadpct').textContent = pct + '%'; const bar = $('#loadbar'); bar.style.width = Math.min(100, pct) + '%'; bar.classList.toggle('hot', pct > 80); break;
+    case 'status': state.lastStatus = m; anchorClock(m); updateKeys(m.keys); if (document.hidden) follow(m.time); $('#voices').textContent = m.active; const pct = Math.round(m.load * 100); $('#loadpct').textContent = pct + '%'; const bar = $('#loadbar'); bar.style.width = Math.min(100, pct) + '%'; bar.classList.toggle('hot', pct > 80); break;
     case 'ended': state.playing = false; $('#play').textContent = 'Play'; break;
     case 'log': console.log('[pfsynth]', m.text); break;
     case 'error': setStatus(m.text, true); break;
@@ -173,10 +173,19 @@ function onWorklet(m) {
 }
 function play() { if (!state.ready || !state.events) return; state.audio.resume(); state.node.port.postMessage({ type: 'play' }); state.playing = true; $('#play').textContent = 'Pause'; }
 function pause() { if (state.node) state.node.port.postMessage({ type: 'pause' }); state.playing = false; $('#play').textContent = 'Play'; }
-function seek(t) { if (!state.node) return; state.node.port.postMessage({ type: 'seek', t }); if (state.lastStatus) { state.lastStatus.time = t; state.lastStatus.at = state.audio.currentTime; } $('#seek').value = t; $('#time').textContent = fmtTime(t) + ' / ' + fmtTime(state.duration); resetFollow(t); if (state.roll) drawRoll(t, true); }
+function seek(t) { if (!state.node) return; state.node.port.postMessage({ type: 'seek', t }); if (state.lastStatus) { state.lastStatus.time = t; } state.clockOffset = t - state.audio.currentTime; $('#seek').value = t; $('#time').textContent = fmtTime(t) + ' / ' + fmtTime(state.duration); resetFollow(t); if (state.roll) drawRoll(t, true); }
+// Playhead time from the audio clock: the worklet reports (song time, its own currentTime) for a
+// block, and both clocks are the context's, so song time = offset + ctx.currentTime with a constant
+// offset while playing.  Re-anchoring only on real changes (seek, start) keeps the roll from jittering.
 function currentTime() {
   const s = state.lastStatus; if (!s) return 0;
-  return state.playing && s.playing ? s.time + (state.audio.currentTime - s.at) : s.time;
+  if (!(state.playing && s.playing)) return s.time;
+  return Math.min(state.duration || Infinity, state.clockOffset + state.audio.currentTime);
+}
+function anchorClock(m) {
+  const off = m.time - m.ctxTime;
+  if (state.clockOffset === undefined || Math.abs(off - state.clockOffset) > 0.02) state.clockOffset = off;
+  else state.clockOffset += (off - state.clockOffset) * 0.05;
 }
 function setStatus(text, err) { const el = $('#status'); el.textContent = text; el.classList.toggle('err', !!err); }
 
@@ -187,7 +196,13 @@ function buildKeys() {
   const W = whites.length;
   for (let n = 21; n <= 108; n++) { const pc = n % 12; if (![1, 3, 6, 8, 10].includes(pc)) continue; const idx = whites.filter(w => w < n).length; const d = document.createElement('div'); d.className = 'b'; d.dataset.n = n; d.style.left = (idx / W * 100) + '%'; box.appendChild(d); }
 }
-function updateKeys(keys) { for (const el of $('#keys').children) el.classList.toggle('on', !!keys[+el.dataset.n]); }
+function updateKeys(keys) {
+  for (const el of $('#keys').children) {
+    const v = keys[+el.dataset.n];
+    if (v) { el.classList.add('on'); el.style.background = velocityColor(v, 1); }
+    else if (el.classList.contains('on')) { el.classList.remove('on'); el.style.background = ''; }
+  }
+}
 
 // ---------- score ----------
 function vrvReady() {
@@ -296,6 +311,7 @@ function buildRoll() {
   drawRoll(currentTime(), true);
 }
 function velocityColor(v, alpha) { const h = 220 - 220 * Math.min(1, v / 110); return `hsla(${h}, 75%, ${45 + 10 * (v / 127)}%, ${alpha})`; }
+function buildVelocityLegend() { const el = $('#vlegend'); if (!el) return; const stops = []; for (let v = 1; v <= 127; v += 9) stops.push(velocityColor(v, 1)); el.style.background = `linear-gradient(90deg, ${stops.join(',')})`; }
 function drawRoll(t, force) {
   const R = state.roll, c = $('#roll'); if (!R) return;
   const wrap = $('#scorewrap'), W = wrap.clientWidth, H = wrap.clientHeight, dpr = window.devicePixelRatio || 1;
@@ -359,7 +375,7 @@ function openSettings(open) { const p = $('#settings'); p.classList.toggle('open
 
 // ---------- wiring ----------
 function init() {
-  buildKeys(); renderSettings('');
+  buildKeys(); buildVelocityLegend(); renderSettings('');
   try { const saved = JSON.parse(localStorage.getItem('pfsynth.settings') || '{}'); for (const k in saved) state.values[+k] = saved[k]; renderSettings(''); } catch (e) {}
   $('#search').addEventListener('input', e => renderPieces(e.target.value));
   $('#setsearch').addEventListener('input', e => renderSettings(e.target.value));

@@ -79,8 +79,18 @@ static pf_player_voice *alloc_voice(pf_player *pl)
 }
 static void note_on(pf_player *pl,int note,int vel)
 {
+    /* A key cannot be struck twice within a few ms: a second note-on that close is a duplicate
+     * (doubled tracks/voices in the file) and is dropped.  Otherwise the string is re-struck: the
+     * hammer meets an already vibrating string and the new strike takes over, so the previous
+     * voice of this key fades out over ~40 ms instead of ringing on top of the new one (two voices
+     * of the same pitch double the attack and beat against each other). */
+    for(int i=0;i<PF_PLAYER_VOICES;i++){
+        pf_player_voice *o=&pl->v[i];if(!o->used||o->note!=note||o->fading)continue;
+        if(pl->t-o->start<.005)return;
+        o->fading=1;o->fade=1;o->fade_rate=exp(-1.0/(pl->sr*.006));
+    }
     pf_player_voice *v=alloc_voice(pl);memset(v,0,sizeof *v);
-    v->used=1;v->note=note;v->held=1;v->start=pl->t;v->level=1;
+    v->used=1;v->note=note;v->vel=vel;v->held=1;v->start=pl->t;v->level=1;
     double velocity=vel/127.0;
     if(pl->opt.pedal_mode){
         pf_partial_init2(&v->p,pf_player_patch(pl->opt.tone),pl->sr,note,velocity,&pl->pedal,pl->opt.una_corda?pl->soft:0);
@@ -95,7 +105,7 @@ static void note_off(pf_player *pl,int note)
 {
     for(int i=0;i<PF_PLAYER_VOICES;i++){
         pf_player_voice *v=&pl->v[i];
-        if(!v->used||v->note!=note||!v->held)continue;
+        if(!v->used||v->note!=note||!v->held||v->fading)continue;
         v->held=0;
         if(pl->opt.pedal_mode){pf_partial_release(&v->p);}          /* the damper follows the pedal position */
         else if(pl->pedal_down||v->sostenuto)v->sustained=1;         /* binary: keep ringing until pedal up */
@@ -159,12 +169,14 @@ int pf_player_render(pf_player *pl,float *out,int frames)
             while(pos<n){
                 int m=n-pos;if(m>1024)m=1024;memset(tmp,0,sizeof(float)*(size_t)m);
                 pf_partial_process(&v->p,tmp,m);if(v->attack)pf_attack_process(&v->a,tmp,m);
+                if(v->fading){for(int k=0;k<m;k++){tmp[k]*=(float)v->fade;v->fade*=v->fade_rate;}}
                 for(int k=0;k<m;k++){out[done+pos+k]+=tmp[k];ss+=(double)tmp[k]*tmp[k];}
                 pos+=m;
             }
             v->level=(float)sqrt(ss/n);
             /* retire voices that have died away (or whose fixed release is long over) */
             if(v->level<3e-5f&&pl->t-v->start>.5)v->used=0;   /* ~-90 dBFS: inaudible in any mix; keeps the pool free for real notes */
+            if(v->fading&&v->fade<1e-4)v->used=0;
         }
         if(pl->opt.resonance)pf_resonance_process(&pl->res,out+done,out+done,n,voiced);
         done+=n;pl->frames+=n;pl->t=pl->frames/pl->sr;
@@ -178,7 +190,9 @@ int pf_player_render(pf_player *pl,float *out,int frames)
     if(pl->opt.limiter){
         double peak=0;for(int k=0;k<frames;k++){double a=fabs(out[k])*g;if(a>peak)peak=a;}
         const double thr=.95;double target=peak>thr?thr/peak:1,prev=pl->lim_gain;
-        if(target<prev)pl->lim_gain=target;else pl->lim_gain=prev+(1-prev)*(1-exp(-frames/(pl->sr*.25)));
+        if(target<prev){pl->lim_gain=target;pl->lim_hold=(long)(pl->sr*.05);}           /* instant attack, then hold 50 ms */
+        else if(pl->lim_hold>0)pl->lim_hold-=frames;                                     /* no release while held: no block-rate pumping */
+        else pl->lim_gain=prev+(1-prev)*(1-exp(-frames/(pl->sr*.25)));
         for(int k=0;k<frames;k++){
             double lg=k<32?prev+(pl->lim_gain-prev)*(k/32.0):pl->lim_gain;
             double x=out[k]*g*lg;out[k]=(float)(x<-1?-1:x>1?1:x);
@@ -189,7 +203,7 @@ int pf_player_render(pf_player *pl,float *out,int frames)
 int pf_player_sounding(const pf_player *pl,unsigned char keys[128])
 {
     memset(keys,0,128);int c=0;
-    for(int i=0;i<PF_PLAYER_VOICES;i++){const pf_player_voice *v=&pl->v[i];if(v->used&&v->level>1e-4f&&(v->held||v->sustained||v->sostenuto||v->p.pedal_pos>.6||pl->t-v->start<.4)){if(!keys[v->note])c++;keys[v->note]=1;}}
+    for(int i=0;i<PF_PLAYER_VOICES;i++){const pf_player_voice *v=&pl->v[i];if(v->used&&v->level>1e-4f&&(v->held||v->sustained||v->sostenuto||v->p.pedal_pos>.6||pl->t-v->start<.4)){if(!keys[v->note])c++;if(v->vel>keys[v->note])keys[v->note]=(unsigned char)v->vel;}}
     return c;
 }
 int pf_player_active(const pf_player *pl){int n=0;for(int i=0;i<PF_PLAYER_VOICES;i++)n+=pl->v[i].used;return n;}
