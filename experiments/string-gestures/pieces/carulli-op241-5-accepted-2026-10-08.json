@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-08",
+  "status": "Owner accepted; proposed in PR #3, not merged or deployed",
+  "scope": "Carulli Andantino Op. 241 No. 5 only; no global guitar model retune",
+  "verdicts": [
+    {
+      "id": "carulli-echo",
+      "preferred": "Recording-aligned dynamics and drier room",
+      "blind": "B"
+    },
+    {
+      "id": "carulli-repeat",
+      "preferred": "Recording-aligned dynamics and drier room",
+      "blind": "B"
+    },
+    {
+      "id": "carulli-dynamics",
+      "preferred": "Recording-aligned dynamics and drier room",
+      "blind": "A"
+    },
+    {
+      "id": "carulli-whole",
+      "preferred": "Recording-aligned dynamics and drier room",
+      "blind": "A"
+    }
+  ],
+  "fit_report": "carulli-op241-5-refit-2026-10-08.json",
+  "judged_whole_candidate_sha256": "4d67503ee30a0f4fa68731815b3e4451d645cca6a02b7b8651457ddb1b1b63a0",
+  "fitted_events_sha256": "3e910b54399c4124044e177f8abb14bc90ec035329e1fd6245cb789d0933f78f",
+  "room": {
+    "rt_low": 0.3,
+    "rt_high": 0.25,
+    "ratio": 0.2
+  },
+  "notes": 290,
+  "velocity_range": [
+    53.035456453611694,
+    215.3110621391596
+  ],
+  "pitch_timing_fingering_and_articulation_changed": false,
+  "recording_uploaded": false,
+  "raw_gaps_annotations_uploaded": false,
+  "web_render_scope": "The web score uses the accepted full-precision strengths and room parameters; existing note-time rounding and web convolution differ from the native audition, so web audio is not claimed bit-exact.",
+  "web_score_sha256": "b265322edcd41df27b159d564e8a22285d0a1c3af3c6c66350de1052d69772ac"
+}

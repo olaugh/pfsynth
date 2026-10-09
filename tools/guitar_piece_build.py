@@ -32,7 +32,8 @@ from string_gesture_audition import setup,export_midi,render_guitar
 from classical_string_audition import read_notes,score
 from guitar_edition_fingering import apply_edition,edition_tuning
 from paired_string_audition import audio
-from guitar_dynamics_fit import Model,fit_room_dynamics_long,physical_cap
+from guitar_dynamics_fit import Model,fit_room_dynamics_long,physical_cap,loudness_envelope
+from guitar_reference import reference_origin,fit_guard
 from guitar_room_fit import fit_room,power,room_impulse
 from guitar_sustain import let_ring
 from guitar_sonatina_audition import strum_from_transcription,transcribed
@@ -71,17 +72,18 @@ def build(slug,lib):
     for msg in mido.MidiFile(d/f'{h}-fine-aligned.mid'):
         t+=msg.time
         if msg.type=='note_on' and msg.velocity:origin=t;break
+    audio_origin,alignment=reference_origin(d/f'{h}.wav',origin,meta['gaps_id'])
     sr,raw=wavfile.read(d/f'{h}.wav',mmap=True);length=raw.shape[0]/sr
     notes,_,_=read_notes(d/f'{h}-fine-aligned.mid',1e9)
-    duration=round(min(length-origin,max(n['end'] for n in notes)+3),2)
+    duration=round(min(length-audio_origin,max(n['end'] for n in notes)+3),2)
     apply_edition(notes,d/f'{h}.xml','GAPS score');tuning=edition_tuning(d/f'{h}.xml')
     for n in notes:n.update(bend=[],slides=[],hammer_to=False,mute=False)
-    log=dict(notes=len(notes),duration=duration,tuning=tuning)
+    log=dict(notes=len(notes),duration=duration,tuning=tuning,alignment=alignment)
     # 2. rolled chords from the transcription
     if any(n.get('score_arpeggiate') for n in notes):
         amt=d/f'{h}-amt.mid'
         if not amt.exists():subprocess.run([str(ROOT/'build/amt-venv/bin/midi_transcription'),str(d/f'{h}.wav'),str(amt),'--instrument','guitar'],check=True,capture_output=True)
-        log['arpeggios']=strum_from_transcription(notes,transcribed(amt),origin)
+        log['arpeggios']=strum_from_transcription(notes,transcribed(amt),audio_origin)
     # 3. slurs and harmonics
     slurs=0
     for i,n in enumerate(notes):
@@ -102,7 +104,7 @@ def build(slug,lib):
     log.update(slurs=slurs,harmonics=harmonics)
     # 4. strings ring
     log['sustain']=let_ring(notes,duration)
-    ref=audio(d/f'{h}.wav',origin,duration);N=round(duration*SR)
+    ref=audio(d/f'{h}.wav',audio_origin,duration);N=round(duration*SR)
     ref=np.pad(ref,(0,max(0,N-len(ref))))[:N]          # rounding can leave the recording a sample short
     model=Model(lib,'nylon / Gil de Avalle body + loading',5,True)
     # 5. room
@@ -114,6 +116,14 @@ def build(slug,lib):
     fitted=[dict(n,velocity=float(round(v,1))) for n,v in zip(notes,velocity)];plain=[dict(n,velocity=100.) for n in notes]
     # 7. renders, body, engraving
     a=model.render(plain,duration);b=model.render(fitted,duration)
+    # Reject a failed dynamics fit under this model, after physical limits and room.
+    # Later body selection is separate; final sound still needs blind acceptance.
+    ir=room_impulse(room['rt_low'],room['rt_high'],room['ratio'])
+    target=loudness_envelope(ref);live=target>target.max()-40
+    def audible_error(y):
+        db=loudness_envelope(fftconvolve(y,ir)[:len(y)])[live]-target[live]
+        return float(np.sqrt(np.mean((db-np.median(db))**2)))
+    log['fit_gate']=fit_guard(velocity,audible_error(a),audible_error(b))
     force=render_guitar(lib,fitted,duration,True,0,body=False,material=1,loading=None,velocity_cap=4).astype(float)
     ranking=body_rank(force,ref,room,slug);log['bodies']=ranking[:5]
     title=f"Guitar · {meta['composer'].split()[-1]} · {meta['title']}"
@@ -137,7 +147,7 @@ def build(slug,lib):
         caption='The GAPS score engraved with Verovio, one system at a time; tab numbers under their notes.',check=dict(measures_matched=engraved['matched'],unmatched=engraved['unmatched']))
     log['engraved']=f"{engraved['notes_placed']}/{engraved['notes']}"
     c['dynamics']=dict(model=model.name,range_exponent=info['gamma'],room=room,method='room-aware band-power fit',envelope_error_db=dict(constant_with_room=info['constant_error_db'],fitted_with_room=info['fitted_error_db']))
-    c['alignment']=dict(source_audio_offset_seconds=origin,method='GAPS fine-aligned MIDI',source='https://aim-qmul.github.io/GAPS/',gaps_id=meta['gaps_id'],youtube=meta['youtube'])
+    c['alignment']=dict(**alignment,source='https://aim-qmul.github.io/GAPS/',gaps_id=meta['gaps_id'],youtube=meta['youtube'])
     c['bodyRanking']=ranking[:8]
     (OUT/f'{cid}-events.json').write_text(json.dumps(fitted,indent=1,default=float)+'\n')
     (OUT/'pieces').mkdir(exist_ok=True);(OUT/'pieces'/f'{slug}.clip.json').write_text(json.dumps(c,default=float)+'\n')

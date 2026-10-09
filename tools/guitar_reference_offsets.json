@@ -1,0 +1,11 @@
+{
+  "055_cV1wc": {
+    "audio_sha256": "cf9f1440c75dc581cd4c650aa25552f88cbd1077aae0fb7fc327011c1a3faefb",
+    "audio_origin_seconds": 0.8879818594104308,
+    "midi_origin_seconds": 2.6363636363636362,
+    "resolution_seconds": 0.009977324263038548,
+    "method": "Positive spectral-change agreement in four independent windows, each selecting 0.888 s; original MIDI-origin crop is approximately 1.748 s late",
+    "recording": "Jonathan Richter, Carulli Op. 241 No. 5",
+    "url": "https://www.youtube.com/watch?v=p2fqfFbL5I4"
+  }
+}

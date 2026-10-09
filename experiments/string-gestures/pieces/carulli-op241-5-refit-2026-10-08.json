@@ -1,0 +1,88 @@
+{
+  "reference_sha256": "cf9f1440c75dc581cd4c650aa25552f88cbd1077aae0fb7fc327011c1a3faefb",
+  "source_audio_offset_seconds": 0.8879818594104308,
+  "notes": 290,
+  "duration": 101.5,
+  "room": {
+    "rt_low": 0.3,
+    "rt_high": 0.25,
+    "ratio": 0.2,
+    "loss": 0.5332032928706194
+  },
+  "calibration": [
+    {
+      "gamma": 0,
+      "error_db": 4.265793169582644,
+      "clipped": 0,
+      "min_velocity": 100.0,
+      "max_velocity": 100.0
+    },
+    {
+      "gamma": 0.25,
+      "error_db": 3.9011623798221233,
+      "clipped": 0,
+      "min_velocity": 85.33782655642483,
+      "max_velocity": 121.13414710845834
+    },
+    {
+      "gamma": 0.5,
+      "error_db": 3.6071975817638733,
+      "clipped": 0,
+      "min_velocity": 72.82544641374449,
+      "max_velocity": 146.73481595693627
+    },
+    {
+      "gamma": 0.75,
+      "error_db": 3.39828800765724,
+      "clipped": 0,
+      "min_velocity": 62.14765314950338,
+      "max_velocity": 177.74596782060078
+    },
+    {
+      "gamma": 1.0,
+      "error_db": 3.30701889137299,
+      "clipped": 0,
+      "min_velocity": 53.035456453611694,
+      "max_velocity": 215.3110621391596
+    },
+    {
+      "gamma": 1.25,
+      "error_db": 3.3514959831758273,
+      "clipped": 4,
+      "min_velocity": 45.259305841791374,
+      "max_velocity": 221.11984307721553
+    },
+    {
+      "gamma": 1.5,
+      "error_db": 3.477849234011899,
+      "clipped": 19,
+      "min_velocity": 38.62330791990978,
+      "max_velocity": 221.11984307721553
+    },
+    {
+      "gamma": 2.0,
+      "error_db": 3.877830021752522,
+      "clipped": 43,
+      "min_velocity": 28.127596412429423,
+      "max_velocity": 221.11984307721553
+    }
+  ],
+  "best": {
+    "gamma": 1.0,
+    "error_db": 3.30701889137299,
+    "clipped": 0,
+    "min_velocity": 53.035456453611694,
+    "max_velocity": 215.3110621391596
+  },
+  "improves_constant": true,
+  "velocity_below30": 0,
+  "velocity_below5": 0,
+  "exact_zero": 0,
+  "status": "Local candidate, not accepted or deployed",
+  "source": "Jonathan Richter / GAPS 055_cV1wc",
+  "method": "Corrected recording crop; published g33 body, no additional string loading; room fitted on first16s; dynamics fitted over full performance; contrast selected after physical limits",
+  "validation_scope": "In-sample numerical fit only; compare blind with the PR velocity floor before adoption",
+  "source_onsets_changed": false,
+  "note_data_uploaded": false,
+  "recording_uploaded": false
+}

@@ -66,3 +66,48 @@ The optional JSON timing/finger controls and their streaming synthesis behavior 
 explained in [Guitar performance JSON](guitar/FORMAT.md). The shared piano/fiddle
 `pfi.wasm` is unchanged. See `guitar/pieces/tarrega-recuerdos/SOURCE.txt` for the
 score adaptation, hand-audit assumptions, body-loading source and tone-port limits.
+
+
+### Checking recording-driven guitar fits
+
+A downloaded performance need not share the GAPS MIDI clock. Known corrections in
+`tools/guitar_reference_offsets.json` are keyed to the SHA-256 of the exact decoded
+audio. The Carulli reference begins around 0.888 seconds in our local recording,
+while its MIDI begins at 2.636 seconds. A different audio hash requires a new
+alignment check; the tool refuses to apply the correction to another file.
+
+The piece builder records MIDI and audio origins separately, and now rejects
+collapsed or non-improving dynamics after applying the physical pluck cap. These
+numerical checks do not replace blind listening acceptance.
+
+For Carulli, the recording and full-resolution GAPS files can be fetched locally
+with `tools/gaps_fetch.py 055_cV1wc`. Its prerequisites are the [GAPS v1 archive](https://zenodo.org/records/13962272)
+at `research/strings/downloads/gaps/gaps_v1_no_audio.zip`, and the archive's
+`gaps_v1/gaps_v1_metadata.csv` copied to `research/strings/midi/gaps/metadata.csv`;
+`yt-dlp` and `ffmpeg` fetch/decode audio. These inputs remain git-ignored.
+The refitting command itself does not require this archive or the private MIDI/XML.
+To refit using
+only the public performance notes plus the local recording:
+
+```sh
+OPENBLAS_NUM_THREADS=1 build/body-venv/bin/python tools/carulli_recording_refit.py \
+  --recording research/strings/midi/gaps/carulli-op241-5/cV1wc.wav \
+  --output build/carulli-refit-new
+python3 tools/test_guitar_reference.py
+```
+
+The output directory must be new and under ignored `build/`. The fit writes local
+candidate audio and JSON; it does not replace the public score. Optional `--events`
+accepts the original unrounded local events for research reproduction. No reference
+recordings or raw GAPS assets belong in a PR. The corrected Carulli fit was
+preferred in all four owner blind comparisons on 2026-10-08; its pluck strengths
+and drier room now replace the temporary velocity floor in the bundled score.
+See `experiments/string-gestures/pieces/carulli-op241-5-accepted-2026-10-08.json`
+for the verdicts and audio checksum. This is a piece-specific acceptance, not
+approval of future automatically generated fits or a global guitar retune.
+
+If another download decodes to a different audio hash, verify its timing instead
+of reusing the correction blindly. `--alignment-manifest local-offsets.json` accepts
+the same schema as `tools/guitar_reference_offsets.json`, with the new exact hash,
+verified `audio_origin_seconds`, and a description of the alignment check. Keep
+that file local until its provenance has been reviewed.
