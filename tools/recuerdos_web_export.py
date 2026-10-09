@@ -60,12 +60,13 @@ def read_source(path):
     for i,n in enumerate(notes): n['id']=i; n['markedFinger']=n.get('finger'); n['markedString']=n.get('string')
     return notes
 
-def assign_strings(notes):
+def assign_strings(notes, *, reach_limits=None, shift_speed=1800, quarter_seconds=60/74):
     """Beam search with held-note geometry and the edition's explicit finger/string hints.
     Written durations stay intact; separate gates release held notes when the hand
     must move. Inferred fingers are only
     used by the audit, not printed as though they came from the edition.
     """
+    reach_limits = {(2,3):45} if reach_limits is None else reach_limits
     groups=[]
     for i,n in enumerate(notes):
         if not groups or notes[groups[-1][0]]['q'] != n['q']: groups.append([])
@@ -101,13 +102,13 @@ def assign_strings(notes):
                   fixed.update({i:notes[i]['finger'] for i in group if notes[i].get('finger',0)>0})
                   # This edition asks for a middle/ring diagonal reach of ~44 mm.
                   # Explicit local audit assumption; the general tool stays at 35.
-                  for fingers in finger_options(contacts,fixed=fixed,reach_limits={(2,3):45}):
+                  for fingers in finger_options(contacts,fixed=fixed,reach_limits=reach_limits):
                       stopped=[(i,s,f) for i,s,f in contacts if f]
                       positions=[f-fingers[i]+1 for i,s,f in stopped]
                       pos=sum(positions)/len(positions) if positions else anchor
                       if positions and max(abs(v-pos) for v in positions)>1.5:continue
                       shift=650*abs(2**(-pos/12)-2**(-anchor/12))
-                      if last is not None and shift>1800*float(q-last)*60/74+15:continue
+                      if last is not None and shift>shift_speed*float(q-last)*quarter_seconds+15:continue
                       new=dict(path)
                       for j in released:new[j]=(*new[j][:3],q)
                       for i,(s,f) in zip(group,chosen):new[i]=(s,f,fingers[i],notes[i]['q']+notes[i]['length'])

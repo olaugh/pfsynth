@@ -1,0 +1,25 @@
+Lágrima — Francisco Tárrega (1852–1909)
+
+Independent note entry from the public-domain original solo edition:
+Madrid: Ildefonso Alier, plate I.5230 A, page 2; Gaylord Music Library scan.
+https://imslp.org/wiki/Special:ReverseLookup/292928
+
+New MusicXML and inferred tablature by pfsynth, dedicated under CC0:
+https://creativecommons.org/publicdomain/zero/1.0/
+Selected printed fingers and string indications constrain the inferred tab.
+No GAPS score, MIDI, alignment file or performance recording is distributed.
+16 written bars; A A B B A, 40 performed bars and 325 note attacks.
+The repeated F-sharp in bar 7 is a tied continuation, not a new pluck.
+The grace slide into bar 9's C is represented by its destination note.
+Timing and levels here are score-led interpretation, not measured player controls.
+
+Tab audit: four fingers, held-contact conflicts, index-only barres, 650 mm scale,
+8 mm string spacing, default pairwise reaches in tools/string_hand_geometry.py
+except index/middle 55 mm (original bar 6 needs about 53 mm diagonally).
+Position changes capped at 900 mm/s plus 15 mm tolerance; complete repeat order
+checked. Necessary releases are explicit gateBeat values; notation retains full
+written duration. These are designed adult-hand limits, not a guarantee for every
+player. Unmarked contacts use inferred fingers; no default-all-index assignment.
+
+Measured body: Robert Mores, CC BY 4.0, https://doi.org/10.5281/zenodo.4604577
+Playback uses the existing physical guitar engine; no recorded audio is streamed.
