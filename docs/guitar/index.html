@@ -6,7 +6,7 @@
 <title>pfsynth guitar</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
-<link rel="stylesheet" href="guitar.css?v=20261007r">
+<link rel="stylesheet" href="guitar.css?v=20261008t2">
 </head>
 <body>
 <header>
@@ -20,6 +20,7 @@
     <input id="seek" type="range" min="0" max="1" step="0.01" value="0" disabled aria-label="Position">
     <span id="time" class="time">0:00 / 0:00</span>
     <span id="cpu" class="cpu" title="Share of real time the audio thread spends rendering the guitar"></span>
+    <label class="tempo" title="Practice tempo: the score timing changes while sounding strings keep vibrating, without pitch shifting or extra attacks">Tempo <input id="tempo" type="range" min="25" max="100" step="5" value="100" aria-label="Tempo, percent of the performed tempo"><span id="tempov">100%</span></label>
   </div>
 </header>
 <main>
@@ -55,6 +56,6 @@
   <p>pfsynth (MIT) · modal nylon strings with a nonlinear pluck, hammer-ons, pull-offs and finger-touch harmonics · guitar bodies measured by Robert Mores (CC BY 4.0) · score and performance sources: see each piece’s credits · score engraving: Verovio · <a href="../">piano demo</a> · <a href="https://github.com/olaugh/pfsynth">source</a></p>
 </footer>
 <script src="https://cdn.jsdelivr.net/npm/verovio@6.3.0/dist/verovio-toolkit-wasm.js" defer></script>
-<script type="module" src="guitar.js?v=20261007r"></script>
+<script type="module" src="guitar.js?v=20261008t2"></script>
 </body>
 </html>

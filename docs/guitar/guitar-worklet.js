@@ -5,7 +5,7 @@ const NOTE = 48;
 class GuitarProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
-    this.ex = null; this.playing = false; this.duration = 0; this.blocks = 0;
+    this.ex = null; this.playing = false; this.duration = 0; this.blocks = 0; this.tempo = 1; this.hasScore = false;
     this.busy = 0; this.span = 0; this.load = 0;   // audio-thread CPU: render time / real time, over ~0.5 s
     this.clock = globalThis.performance && performance.now ? () => performance.now() : () => Date.now();
     this.port.onmessage = (e) => this.onMessage(e.data).catch(err => { this.playing = false; this.port.postMessage({type:'error',text:err.message}); });
@@ -45,10 +45,18 @@ class GuitarProcessor extends AudioWorkletProcessor {
         dv.setInt32(ib + 24*k + 20, 0, true);
       });
       const tun = ex.pfiw_tuning(); (m.tuning || [64, 59, 55, 50, 45, 40]).forEach((v, k) => dv.setInt8(tun + k, v));
-      const err = ex.pfiw_load(n, 0, 0, 6, m.duration);
-      this.duration = m.duration; this.playing = false;
-      this.port.postMessage({ type: 'loaded', ok: !err, duration: m.duration, notes: n });
+      let err = ex.pfiw_load(n, 0, 0, 6, m.duration);
+      this.tempo = m.tempo ?? 1;
+      if (!err) err = ex.pfiw_tempo(this.tempo);
+      this.hasScore = !err; this.duration = m.duration / this.tempo; this.playing = false;
+      this.port.postMessage({ type: 'loaded', ok: !err, duration: this.duration, notes: n });
       if (m.seek) ex.pfiw_seek(m.seek);
+    } else if (m.type === 'tempo') {
+      if (!this.hasScore) return; // loadScore will supply the current slider value
+      const previous = this.tempo;
+      if (this.ex.pfiw_tempo(m.rate)) throw new Error('Invalid practice tempo.');
+      this.tempo = m.rate; this.duration *= previous / this.tempo;
+      this.port.postMessage({type:'tempo', tempo:this.tempo, t:this.ex.pfiw_time(), duration:this.duration});
     } else if (m.type === 'loading-enabled') { if (this.ex) this.ex.pfiw_guitar_set_loading(m.count); }
     else if (m.type === 'play') this.playing = !!this.ex;
     else if (m.type === 'pause') this.playing = false;
@@ -66,7 +74,7 @@ class GuitarProcessor extends AudioWorkletProcessor {
     if (++this.blocks % 6 === 0) {
       const t = ex.pfiw_time(), c = ex.pfiw_sounding(), b = ex.pfiw_sounding_buffer(), dv = new DataView(ex.memory.buffer), s = [];
       for (let k = 0; k < c; k++) { const o = b + this.soundingSize * k; s.push([dv.getInt32(o, true), dv.getFloat32(o + 8, true), dv.getInt8(o + 12), dv.getInt8(o + 13)]); }
-      this.port.postMessage({ type: 'tick', t, sounding: s, load: this.load });
+      this.port.postMessage({ type: 'tick', t, tempo:this.tempo, sounding: s, load: this.load });
       if (t >= this.duration) { this.playing = false; this.port.postMessage({ type: 'end' }); }
     }
     return true;
